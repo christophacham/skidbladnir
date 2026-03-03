@@ -117,7 +117,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| Raw terminal emulator (xterm.js) | Structured output is the value proposition — raw PTY rendering undermines it |
+| Raw terminal emulator (xterm.js) | Structured output is the value proposition -- raw PTY rendering undermines it |
 | Multi-user / team access | Single-user by design; oauth2-proxy allowlist enforces this |
 | Mobile-responsive layout | Agent output is wide; desktop-first, no phone optimization |
 | Drag-and-drop task reordering | Phase transitions have side effects; arbitrary movement conflicts with workflow engine |
@@ -135,13 +135,70 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| INFRA-01 | Phase 1: Daemon Foundation | Pending |
+| INFRA-02 | Phase 3: WebSocket Streaming | Pending |
+| INFRA-03 | Phase 1: Daemon Foundation | Pending |
+| INFRA-04 | Phase 1: Daemon Foundation | Pending |
+| INFRA-05 | Phase 1: Daemon Foundation | Pending |
+| INFRA-06 | Phase 1: Daemon Foundation | Pending |
+| PTY-01 | Phase 2: PTY Process Management | Pending |
+| PTY-02 | Phase 2: PTY Process Management | Pending |
+| PTY-03 | Phase 2: PTY Process Management | Pending |
+| PTY-04 | Phase 2: PTY Process Management | Pending |
+| PTY-05 | Phase 2: PTY Process Management | Pending |
+| PTY-06 | Phase 2: PTY Process Management | Pending |
+| PTY-07 | Phase 2: PTY Process Management | Pending |
+| WS-01 | Phase 3: WebSocket Streaming | Pending |
+| WS-02 | Phase 3: WebSocket Streaming | Pending |
+| WS-03 | Phase 3: WebSocket Streaming | Pending |
+| WS-04 | Phase 3: WebSocket Streaming | Pending |
+| WS-05 | Phase 3: WebSocket Streaming | Pending |
+| WS-06 | Phase 7: Structured Output & Session Intelligence | Pending |
+| WS-07 | Phase 7: Structured Output & Session Intelligence | Pending |
+| WS-08 | Phase 7: Structured Output & Session Intelligence | Pending |
+| BOARD-01 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-02 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-03 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-04 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-05 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-06 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-07 | Phase 4: Frontend Kanban Board | Pending |
+| OUTPUT-01 | Phase 5: Task Detail & Live Output | Pending |
+| OUTPUT-02 | Phase 5: Task Detail & Live Output | Pending |
+| OUTPUT-03 | Phase 5: Task Detail & Live Output | Pending |
+| OUTPUT-04 | Phase 5: Task Detail & Live Output | Pending |
+| OUTPUT-05 | Phase 7: Structured Output & Session Intelligence | Pending |
+| OUTPUT-06 | Phase 7: Structured Output & Session Intelligence | Pending |
+| OUTPUT-07 | Phase 7: Structured Output & Session Intelligence | Pending |
+| OUTPUT-08 | Phase 7: Structured Output & Session Intelligence | Pending |
+| FLOW-01 | Phase 6: Workflow Engine | Pending |
+| FLOW-02 | Phase 6: Workflow Engine | Pending |
+| FLOW-03 | Phase 6: Workflow Engine | Pending |
+| FLOW-04 | Phase 6: Workflow Engine | Pending |
+| FLOW-05 | Phase 6: Workflow Engine | Pending |
+| FLOW-06 | Phase 6: Workflow Engine | Pending |
+| FLOW-07 | Phase 6: Workflow Engine | Pending |
+| FLOW-08 | Phase 6: Workflow Engine | Pending |
+| AUTH-01 | Phase 9: Auth & Deployment | Pending |
+| AUTH-02 | Phase 9: Auth & Deployment | Pending |
+| AUTH-03 | Phase 9: Auth & Deployment | Pending |
+| AUTH-04 | Phase 9: Auth & Deployment | Pending |
+| SYS-01 | Phase 8: System Monitoring | Pending |
+| SYS-02 | Phase 8: System Monitoring | Pending |
+| SYS-03 | Phase 8: System Monitoring | Pending |
+| SYS-04 | Phase 8: System Monitoring | Pending |
+| UX-01 | Phase 10: UX Polish | Pending |
+| UX-02 | Phase 10: UX Polish | Pending |
+| UX-03 | Phase 10: UX Polish | Pending |
+| UX-04 | Phase 10: UX Polish | Pending |
+| UX-05 | Phase 10: UX Polish | Pending |
+| UX-06 | Phase 10: UX Polish | Pending |
 
 **Coverage:**
-- v1 requirements: 52 total
-- Mapped to phases: 0
-- Unmapped: 52
+- v1 requirements: 58 total
+- Mapped to phases: 58
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation*
