@@ -5,372 +5,355 @@
 ## Test Framework
 
 **Runner:**
-- Rust built-in test harness (`cargo test`)
-- No external test runner; uses standard `#[test]` macro
-- Test infrastructure located in `tests/` directory and inline via `#[path]` includes
+- Rust built-in test framework (`cargo test`)
+- No external test runner (no `cargo-nextest`)
 
 **Assertion Library:**
-- Standard Rust assertions: `assert!()`, `assert_eq!()`, `assert_ne!()`
-- No external assertion library; all assertions are built-in
+- Standard `assert!`, `assert_eq!`, `assert_ne!` macros
+- No third-party assertion library
+
+**Mocking:**
+- `mockall` 0.13 - conditional dependency via `test-mocks` feature flag
+- Available as both dev-dependency and optional dependency
 
 **Run Commands:**
 ```bash
-cargo test                              # Run all tests
-cargo test --features test-mocks        # Run tests with mock infrastructure
-cargo test --lib                        # Run unit tests only (exclude integration tests)
-cargo test --test '*'                   # Run integration tests only
+cargo test                        # Run unit + integration tests (no mocks)
+cargo test --features test-mocks  # Run all tests including mock-based tests
+cargo build --verbose             # CI build step
 ```
 
-**Feature flag:**
-- `test-mocks` feature optional, gates mockall dependency and mock implementations
-- When disabled, mock code is stripped via `#[cfg(feature = "test-mocks")]`
+**CI:** `.github/workflows/ci.yml` runs `cargo test --verbose --features test-mocks` on ubuntu-latest and macos-latest with stable Rust.
 
 ## Test File Organization
 
-**Location:**
-- **Unit tests:** Inline with modules, included via `#[path]` attribute
-- **Integration tests:** Separate files in `tests/` directory
-- Pattern: Tests are part of module or co-located in `tests/` but not both
+**Location:** Two patterns coexist:
+
+1. **Integration tests in `tests/` directory** (7 files, 1809 lines total):
+   - `tests/db_tests.rs` (114 lines) - Database model tests
+   - `tests/config_tests.rs` (293 lines) - Configuration merge/parse tests
+   - `tests/board_tests.rs` (225 lines) - Board navigation tests
+   - `tests/git_tests.rs` (473 lines) - Git worktree operations (real git)
+   - `tests/agent_tests.rs` (42 lines) - Agent selection parsing
+   - `tests/mock_infrastructure_tests.rs` (190 lines) - Mock infrastructure validation
+   - `tests/shell_popup_tests.rs` (472 lines) - Shell popup logic + rendering
+
+2. **Unit tests in-module via `#[path]` attribute** (1 file, 2792 lines):
+   - `src/tui/app_tests.rs` included at the bottom of `src/tui/app.rs`:
+     ```rust
+     #[cfg(test)]
+     #[path = "app_tests.rs"]
+     mod tests;
+     ```
+   - This gives tests access to private functions in `app.rs` (e.g., `generate_pr_description`, `create_pr_with_content`, `fuzzy_find_files`, `fuzzy_score`, `send_key_to_tmux`, `ensure_project_tmux_session`)
 
 **Naming:**
-- Integration test files: `{module}_tests.rs` → `db_tests.rs`, `agent_tests.rs`, `board_tests.rs`
-- Inline test modules: included file `app_tests.rs` via `#[path = "app_tests.rs"]` in `app.rs`
-- All test functions prefixed with `test_`: `test_task_status_as_str()`, `test_board_state_new()`
+- Integration test files: `{module}_tests.rs`
+- Unit test module: `app_tests.rs` (included via `#[path]`)
+- Test functions: `test_{what_is_tested}` or `test_{function_name}_{scenario}`
 
-**Test File Locations:**
+**Structure:**
 ```
-src/
-├── tui/
-│   ├── app.rs
-│   ├── app_tests.rs          # Included via #[path] in app.rs
-│   ├── board.rs
-│   └── ...
-└── ...
-
 tests/
-├── db_tests.rs               # Integration tests for database
-├── agent_tests.rs            # Integration tests for agent module
-├── board_tests.rs            # Integration tests for board navigation
-├── config_tests.rs           # Integration tests for configuration
-├── git_tests.rs              # Integration tests for git operations
-├── mock_infrastructure_tests.rs  # Tests for mock framework itself
-└── shell_popup_tests.rs      # Integration tests for shell popup
+├── agent_tests.rs                # Pure function tests for agent selection
+├── board_tests.rs                # BoardState navigation logic
+├── config_tests.rs               # Config parsing, merging, first-run logic
+├── db_tests.rs                   # Task/Project model construction
+├── git_tests.rs                  # Worktree create/remove (real git repos)
+├── mock_infrastructure_tests.rs  # Validates mock setup patterns
+└── shell_popup_tests.rs          # Popup scrolling, rendering, trimming
+
+src/tui/
+└── app_tests.rs                  # Unit tests for app.rs private functions
 ```
 
 ## Test Structure
 
 **Suite Organization:**
+- No `describe` or `mod tests {}` nesting in integration tests - flat list of `#[test]` functions
+- Section comments using `// === Section Name ===` to group related tests
+- Helper functions at the top of the file (e.g., `create_test_task()`, `setup_git_repo()`)
 
-Unit test pattern from `tests/db_tests.rs`:
+**Example pattern from `tests/board_tests.rs`:**
 ```rust
-// === TaskStatus Tests ===
+use agtx::db::{Task, TaskStatus};
+use agtx::tui::board::BoardState;
 
-#[test]
-fn test_task_status_as_str() {
-    assert_eq!(TaskStatus::Backlog.as_str(), "backlog");
-    assert_eq!(TaskStatus::Planning.as_str(), "planning");
-    // ... more assertions
-}
-
-#[test]
-fn test_task_status_roundtrip() {
-    for status in TaskStatus::columns() {
-        let s = status.as_str();
-        let parsed = TaskStatus::from_str(s);
-        assert_eq!(parsed, Some(*status));
-    }
-}
-
-// === Task Tests ===
-
-#[test]
-fn test_task_new() {
-    let task = Task::new("Test Task", "claude", "project-123");
-    assert!(!task.id.is_empty());
-    assert_eq!(task.title, "Test Task");
-    // ... more assertions
-}
-```
-
-**Patterns:**
-- **Setup:** Create test data inline (no setup functions; data construction is straightforward)
-- **Execution:** Call single function or method being tested
-- **Assertion:** Multiple assertions per test to verify all aspects
-
-**Minimal fixtures:**
-Test helper from `tests/board_tests.rs`:
-```rust
 fn create_test_task(title: &str, status: TaskStatus) -> Task {
     let mut task = Task::new(title, "claude", "test-project");
     task.status = status;
     task
 }
+
+// === BoardState Tests ===
+
+#[test]
+fn test_board_state_new() {
+    let board = BoardState::new();
+    assert!(board.tasks.is_empty());
+    assert_eq!(board.selected_column, 0);
+    assert_eq!(board.selected_row, 0);
+}
+
+#[test]
+fn test_tasks_in_column_with_tasks() {
+    let mut board = BoardState::new();
+    board.tasks = vec![
+        create_test_task("Task 1", TaskStatus::Backlog),
+        create_test_task("Task 2", TaskStatus::Backlog),
+        create_test_task("Task 3", TaskStatus::Running),
+    ];
+    assert_eq!(board.tasks_in_column(0).len(), 2);
+    assert_eq!(board.tasks_in_column(2).len(), 1);
+}
 ```
+
+**Patterns:**
+- **Arrange/Act/Assert** - setup data, call function, assert result
+- No explicit setup/teardown lifecycle hooks; helper functions handle setup
+- `TempDir` from `tempfile` crate for filesystem tests (auto-cleanup on drop)
 
 ## Mocking
 
-**Framework:** `mockall` crate (version 0.13)
+**Framework:** `mockall` 0.13
 
-**Mock generation:**
-- Traits marked with `#[cfg_attr(feature = "test-mocks", automock)]`
-- Generates `Mock{TraitName}` struct automatically
-- Example:
-  ```rust
-  // src/git/operations.rs
-  #[cfg_attr(feature = "test-mocks", automock)]
-  pub trait GitOperations: Send + Sync {
-    fn create_worktree(&self, project_path: &Path, task_slug: &str) -> Result<String>;
-    fn remove_worktree(&self, project_path: &Path, worktree_path: &str) -> Result<()>;
-    // ...
-  }
-  ```
-
-**Mocking pattern from `tests/mock_infrastructure_tests.rs`:**
+**Feature gate pattern:**
 ```rust
-#[test]
-fn test_git_operations_mock_for_pr_workflow() {
-    let mut mock_git = MockGitOperations::new();
-
-    // Setup expectations
-    mock_git.expect_add_all()
-        .times(1)
-        .returning(|_| Ok(()));
-
-    mock_git.expect_has_changes()
-        .times(1)
-        .returning(|_| true);
-
-    mock_git.expect_commit()
-        .times(1)
-        .withf(|_: &Path, msg: &str| msg.contains("Test commit"))
-        .returning(|_, _| Ok(()));
-
-    // Execute
-    let worktree = Path::new("/tmp/worktree");
-    mock_git.add_all(worktree).unwrap();
-    assert!(mock_git.has_changes(worktree));
-    mock_git.commit(worktree, "Test commit message").unwrap();
+// In trait definition (src/git/operations.rs):
+#[cfg_attr(feature = "test-mocks", automock)]
+pub trait GitOperations: Send + Sync {
+    fn create_worktree(&self, project_path: &Path, task_slug: &str) -> Result<String>;
+    // ...
 }
+
+// In module re-exports (src/git/mod.rs):
+#[cfg(feature = "test-mocks")]
+pub use operations::MockGitOperations;
+
+// In tests (src/tui/app_tests.rs):
+#[cfg(feature = "test-mocks")]
+use crate::git::{MockGitOperations, MockGitProviderOperations};
+
+#[test]
+#[cfg(feature = "test-mocks")]
+fn test_something() { ... }
 ```
 
-**Call expectations:**
-- `.times(N)` - Expect exactly N calls
-- `.times(1)` - Most common for single operation tests
-- `.withf(|args| condition)` - Validate argument conditions
-- `.with(predicate::eq(value))` - Exact value match
-- `.returning(|args| result)` - Return value or Result
-- `.return_const(value)` - Return same value for all calls
+**Mock configuration patterns from `tests/mock_infrastructure_tests.rs` and `src/tui/app_tests.rs`:**
 
-**Predicate matching:**
 ```rust
-mock_tmux.expect_create_window()
-    .with(
-        mockall::predicate::eq("my-project"),
-        mockall::predicate::eq("/home/user/project"),
-    )
+// Basic expectation with return value
+let mut mock_tmux = MockTmuxOperations::new();
+mock_tmux.expect_has_session()
+    .returning(|_| false);
+
+// Expectation with argument matching
+mock_git.expect_commit()
+    .withf(|path: &Path, msg: &str| {
+        path == Path::new("/tmp/worktree") && msg.contains("Test commit")
+    })
     .times(1)
-    .returning(|_, _, _, _| Ok(()));
+    .returning(|_, _| Ok(()));
+
+// Expectation with specific argument values (predicate::eq)
+mock_tmux.expect_has_session()
+    .with(mockall::predicate::eq("my-project"))
+    .times(1)
+    .returning(|_| false);
+
+// Return constant (for methods returning &str)
+mock_agent.expect_co_author_string()
+    .return_const("Claude <noreply@anthropic.com>".to_string());
+
+// Arc wrapping for thread-safe sharing
+let arc_git: Arc<dyn GitOperations> = Arc::new(mock_git);
 ```
 
 **What to Mock:**
-- I/O operations: git commands, tmux sessions, file system access
-- External services: agent command execution, GitHub API calls
-- Any operation that would be slow, have side effects, or depend on environment
+- External system interactions: tmux, git CLI, GitHub API, coding agent CLI
+- Every trait in the operations layer: `GitOperations`, `TmuxOperations`, `AgentOperations`, `GitProviderOperations`, `AgentRegistry`
 
 **What NOT to Mock:**
-- Pure business logic: `Task::generate_session_name()`, `TaskStatus::from_str()`, `BoardState::move_left()`
-- Configuration parsing and validation
-- String/type conversions
-- Data model methods (only mock the trait boundaries)
-
-**Test-only trait implementations:**
-Mock implementations are separate from real implementations:
-```rust
-// Real in src/git/operations.rs
-pub struct RealGitOps;
-impl GitOperations for RealGitOps { ... }
-
-// Mock auto-generated by #[automock]
-// pub struct MockGitOperations { ... }
-// impl GitOperations for MockGitOperations { ... }
-```
+- Pure data types: `Task`, `Project`, `TaskStatus`, `BoardState`, `ShellPopup`
+- Configuration structs: `GlobalConfig`, `ProjectConfig`, `MergedConfig`
+- Internal algorithms: fuzzy search scoring, string transformations, board navigation
+- Rendering output: verified via ratatui's `TestBackend`
 
 ## Fixtures and Factories
 
-**Test Data Creation:**
-- Minimal factory functions for reusable test objects
-- Example from `tests/board_tests.rs`:
-  ```rust
-  fn create_test_task(title: &str, status: TaskStatus) -> Task {
-      let mut task = Task::new(title, "claude", "test-project");
-      task.status = status;
-      task
-  }
-  ```
-
-- Direct instantiation for simple cases:
-  ```rust
-  #[test]
-  fn test_task_new() {
-      let task = Task::new("Test Task", "claude", "project-123");
-      // ... assertions
-  }
-  ```
-
-**Location:**
-- Test fixtures defined at top of test file or integrated inline
-- No separate fixtures directory; data small and straightforward
-- Mock configuration built inline in each test
-
-**Reusable test setup from `tests/mock_infrastructure_tests.rs`:**
+**Test Data:**
 ```rust
-#[test]
-fn test_mocks_can_be_arc_wrapped() {
-    let mut mock_git = MockGitOperations::new();
-    mock_git.expect_list_files()
-        .returning(|_| vec!["file1.rs".to_string()]);
+// Task factory helper (tests/board_tests.rs)
+fn create_test_task(title: &str, status: TaskStatus) -> Task {
+    let mut task = Task::new(title, "claude", "test-project");
+    task.status = status;
+    task
+}
 
-    let arc_git: Arc<dyn GitOperations> = Arc::new(mock_git);
-    let arc_git_clone: Arc<dyn GitOperations> = Arc::clone(&arc_git);
-    let files = arc_git_clone.list_files(Path::new("/tmp"));
-    assert_eq!(files.len(), 1);
+// Full Task struct construction for mock tests (src/tui/app_tests.rs)
+let task = Task {
+    id: "test-123".to_string(),
+    title: "Test task".to_string(),
+    description: None,
+    status: TaskStatus::Running,
+    agent: "claude".to_string(),
+    project_id: "proj-1".to_string(),
+    session_name: Some("test-session".to_string()),
+    worktree_path: Some("/tmp/worktree".to_string()),
+    branch_name: Some("feature/test".to_string()),
+    pr_number: None,
+    pr_url: None,
+    plugin: None,
+    cycle: 1,
+    created_at: chrono::Utc::now(),
+    updated_at: chrono::Utc::now(),
+};
+
+// Git repo setup helper (tests/git_tests.rs)
+fn setup_git_repo() -> TempDir {
+    let temp_dir = TempDir::new().unwrap();
+    Command::new("git").current_dir(temp_dir.path()).args(["init"]).output().unwrap();
+    Command::new("git").current_dir(temp_dir.path()).args(["config", "user.email", "test@test.com"]).output().unwrap();
+    Command::new("git").current_dir(temp_dir.path()).args(["config", "user.name", "Test User"]).output().unwrap();
+    std::fs::write(temp_dir.path().join("README.md"), "# Test").unwrap();
+    Command::new("git").current_dir(temp_dir.path()).args(["add", "."]).output().unwrap();
+    Command::new("git").current_dir(temp_dir.path()).args(["commit", "-m", "Initial commit"]).output().unwrap();
+    Command::new("git").current_dir(temp_dir.path()).args(["branch", "-M", "main"]).output().unwrap();
+    temp_dir
 }
 ```
 
+**Location:**
+- Helpers are defined at the top of each test file that needs them
+- No shared fixtures directory or test utilities module
+
 ## Coverage
 
-**Requirements:** No enforced coverage target
-
-**Coverage goals (inferred from test count):**
-- Core models: Comprehensive unit tests (TaskStatus, Task, Project, etc.)
-- Business logic: High coverage for board navigation, configuration merging
-- I/O boundaries: Tested via mocks to verify contract
-- TUI/render logic: Limited (complex to test, primarily manual verification)
+**Requirements:** None enforced. No coverage threshold configured.
 
 **View Coverage:**
 ```bash
-# No built-in coverage command; would require external tool like tarpaulin
-cargo tarpaulin --out Html  # If installed: cargo install cargo-tarpaulin
+# No built-in coverage command. Use cargo-tarpaulin or cargo-llvm-cov manually:
+cargo install cargo-tarpaulin
+cargo tarpaulin --features test-mocks
 ```
 
 ## Test Types
 
-**Unit Tests:**
-- **Scope:** Individual functions, enums, small structs
-- **Approach:** Test one aspect per test function
-- **Examples:**
-  - `test_task_status_as_str()` - Enum method for all variants
-  - `test_task_generate_session_name()` - String generation logic
-  - `test_board_state_move_left()` - State navigation
+**Unit Tests (pure logic, no external dependencies):**
+- `tests/db_tests.rs` - Task/Project model creation, status enum round-trips
+- `tests/config_tests.rs` - Config defaults, merging, first-run action logic, serde round-trips
+- `tests/board_tests.rs` - Board navigation (move left/right/up/down, clamping, selection)
+- `tests/agent_tests.rs` - Agent selection parsing (number input validation)
+- `tests/shell_popup_tests.rs` - Scroll math, line trimming, footer text, rendering with `TestBackend`
+- `src/tui/app_tests.rs` (non-mock tests) - Fuzzy scoring algorithm
 
-**Integration Tests:**
-- **Scope:** Module interactions, mock trait boundaries
-- **Approach:** Test workflows across components
-- **Examples from `tests/mock_infrastructure_tests.rs`:**
-  - `test_git_operations_mock_for_pr_workflow()` - Multi-step git sequence
-  - `test_tmux_session_management()` - Create → window → verify session exists
-  - `test_agent_registry_mock()` - Registry lookup and agent method chaining
+**Mock-based Unit Tests (require `--features test-mocks`):**
+- `tests/mock_infrastructure_tests.rs` - Validates mock configuration patterns work correctly
+- `src/tui/app_tests.rs` (mock tests) - PR description generation, PR creation workflow, session management, fuzzy file search, key forwarding to tmux
 
-**Mock/Trait Tests:**
-- **Purpose:** Verify mock infrastructure works before using in real tests
-- **Scope:** Mock setup, expectation matching, Arc wrapping for thread safety
-- **File:** `tests/mock_infrastructure_tests.rs` (required for test-mocks feature)
+**Integration Tests (require real git):**
+- `tests/git_tests.rs` - Creates real temporary git repos, creates/removes worktrees, tests branch detection, worktree initialization with file copying and init scripts
 
-**App Logic Tests (with mocks):**
-- **Location:** `src/tui/app_tests.rs` (included inline)
-- **Pattern:** Test PR generation, error handling
-- **Requires:** `#[cfg(feature = "test-mocks")]` guard
-- **Example:**
-  ```rust
-  #[test]
-  #[cfg(feature = "test-mocks")]
-  fn test_generate_pr_description_with_diff_and_agent() {
-      let mut mock_git = MockGitOperations::new();
-      let mut mock_agent = MockAgentOperations::new();
+**Rendering Tests:**
+- `tests/shell_popup_tests.rs` - Uses ratatui `TestBackend` to verify popup rendering:
+```rust
+let backend = TestBackend::new(80, 24);
+let mut terminal = Terminal::new(backend).unwrap();
+terminal.draw(|frame| {
+    render_shell_popup(&popup, frame, area, lines, &colors);
+}).unwrap();
+let buffer = terminal.backend().buffer();
+let buffer_content: String = buffer.content().iter().map(|c| c.symbol()).collect();
+assert!(buffer_content.contains("Test Task"));
+```
 
-      // Setup expectations
-      mock_git.expect_diff_stat_from_main()
-          .returning(|_| " src/main.rs | 10 +++++++---\n".to_string());
-      mock_agent.expect_generate_text()
-          .returning(|_, _| Ok("Description".to_string()));
-
-      // Execute
-      let (title, body) = generate_pr_description("Task", Some("/tmp"), None, &mock_git, &mock_agent);
-
-      // Verify
-      assert_eq!(title, "Task");
-      assert!(body.contains("src/main.rs"));
-  }
-  ```
-
-**No E2E Tests:**
-- Application is TUI with tmux integration (difficult to test end-to-end)
-- Workflows tested via mock components instead
-- Manual testing and integration tests cover actual git/tmux behavior
+**E2E Tests:**
+- Not used. No tmux-based or TUI interaction tests.
 
 ## Common Patterns
 
 **Async Testing:**
-- Application uses `#[tokio::main]` in `main.rs`
-- Integration tests are synchronous (no async test functions found)
-- No `#[tokio::test]` usage; mock infrastructure doesn't require async
+- Not used. Despite `tokio` being a dependency, all tests are synchronous `#[test]` functions.
+- The async runtime is only used in `main.rs` for the event loop.
 
 **Error Testing:**
-Most tests verify success path. Error cases tested through:
-- Option/Result assertions: `assert_eq!(parse_hex("#FFF"), None)`
-- Expected failures in error handling paths
-- Example from `config_tests.rs`:
-  ```rust
-  #[test]
-  fn test_parse_hex_invalid() {
-      assert_eq!(ThemeConfig::parse_hex("#FFF"), None);      // Too short
-      assert_eq!(ThemeConfig::parse_hex("#GGGGGG"), None);   // Invalid hex
-      assert_eq!(ThemeConfig::parse_hex(""), None);          // Empty
-  }
-  ```
-
-**Roundtrip/Encoding Tests:**
-Verify bidirectional conversions:
 ```rust
+// Test that errors are returned (not panics)
 #[test]
-fn test_task_status_roundtrip() {
-    for status in TaskStatus::columns() {
-        let s = status.as_str();
-        let parsed = TaskStatus::from_str(s);
-        assert_eq!(parsed, Some(*status));
-    }
+fn test_create_worktree_on_non_git_directory() {
+    let temp_dir = TempDir::new().unwrap();
+    let result = git::create_worktree(temp_dir.path(), "should-fail");
+    assert!(result.is_err());
+}
+
+// Test error content
+#[test]
+#[cfg(feature = "test-mocks")]
+fn test_create_pr_with_content_push_failure() {
+    // ... setup mocks with error return ...
+    mock_git.expect_push()
+        .returning(|_, _, _| Err(anyhow::anyhow!("Permission denied")));
+
+    let result = create_pr_with_content(/* ... */);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("Permission denied"));
+}
+
+// Test graceful handling (no assertion on Ok/Err, just no panic)
+#[test]
+fn test_remove_worktree_nonexistent() {
+    let temp_dir = setup_git_repo();
+    let result = git::remove_worktree(temp_dir.path(), "does-not-exist");
+    let _ = result; // Just verify no panic
 }
 ```
 
-**State Transition Tests:**
-Board navigation tests verify state changes:
+**Testing with temporary directories:**
 ```rust
+use tempfile::TempDir;
+
 #[test]
-fn test_board_move_left_with_clamp() {
-    let mut board = BoardState::new();
-    // ... setup ...
-    board.selected_column = 1;
-    board.move_left();
-    assert_eq!(board.selected_column, 0);
+fn test_something() {
+    let temp_dir = TempDir::new().unwrap(); // Auto-cleaned on drop
+    // ... use temp_dir.path() ...
 }
 ```
 
-## Test Dependencies
-
-**Dev Dependencies:**
-- `tempfile` 3.x - For temporary file/directory creation in tests
-- `mockall` 0.13 - For trait mocking (behind `test-mocks` feature)
-
-**Running tests with full infrastructure:**
-```bash
-cargo test --features test-mocks
+**Feature-gated tests:**
+```rust
+#[test]
+#[cfg(feature = "test-mocks")]
+fn test_requiring_mocks() {
+    let mut mock = MockGitOperations::new();
+    // ...
+}
 ```
 
-**Testing without mocks:**
-```bash
-cargo test
-```
-(Tests not requiring `test-mocks` feature still run)
+## Test Count Summary
+
+| File | Tests | Lines | Feature Gate |
+|------|-------|-------|-------------|
+| `tests/db_tests.rs` | 10 | 114 | None |
+| `tests/config_tests.rs` | 17 | 293 | None |
+| `tests/board_tests.rs` | 12 | 225 | None |
+| `tests/git_tests.rs` | 18 | 473 | None |
+| `tests/agent_tests.rs` | 6 | 42 | None |
+| `tests/mock_infrastructure_tests.rs` | 6 | 190 | `test-mocks` |
+| `tests/shell_popup_tests.rs` | 24 | 472 | None |
+| `src/tui/app_tests.rs` | ~55 | 2792 | Most require `test-mocks` |
+
+Total: ~148 tests across 8 files (~4,601 lines of test code)
+
+## Untested Areas
+
+- **TUI event loop and key dispatching** - `App::run()` and `App::handle_key()` are not tested; only extracted helper functions are
+- **Database CRUD operations** - No tests for `Database::open_project()`, `create_task()`, `update_task()`, `get_task()` etc. (only model construction is tested)
+- **Tmux real operations** - Only mock-verified; no integration tests with actual tmux
+- **Agent detection** - `detect_available_agents()` depends on system state, not tested
+- **Plugin loading from disk** - `WorkflowPlugin::load()` not tested
+- **Skills deployment** - `write_skills_to_worktree()` (in `app.rs`) not tested
+- **Config file I/O** - `GlobalConfig::load()`/`save()`, `ProjectConfig::load()`/`save()` not tested
 
 ---
 

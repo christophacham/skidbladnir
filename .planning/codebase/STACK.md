@@ -5,132 +5,111 @@
 ## Languages
 
 **Primary:**
-- Rust 2021 edition - Entire application (TUI, database, git, agent integration, testing)
+- Rust (Edition 2021) - All application code (`src/`)
+
+**Secondary:**
+- Bash - Installer script (`install.sh`), init scripts in plugins
+- TOML - Configuration files (`Cargo.toml`, `plugins/*/plugin.toml`, config files)
+- Markdown - Skill files (`plugins/*/skills/*.md`)
+- YAML - CI/CD workflows (`.github/workflows/`)
 
 ## Runtime
 
 **Environment:**
-- Rust 1.70+ (Cargo-managed)
+- Native binary (compiled Rust) - no interpreter or VM required
+- Minimum Rust version: 1.70+ (stated in `CLAUDE.md`; CI uses `stable` toolchain)
+- Current dev toolchain: rustc 1.93.1
 
 **Package Manager:**
-- Cargo
-- Lockfile: `Cargo.lock` present
+- Cargo (1.93.1 on dev machine)
+- Lockfile: `Cargo.lock` present and committed
 
 ## Frameworks
 
 **Core:**
-- ratatui 0.30 - Terminal UI rendering with crossterm backend
-- crossterm 0.29 - Cross-platform terminal manipulation (input, colors, cursor, events)
-
-**Async:**
-- tokio 1.44 (full features) - Async runtime for concurrent operations
-
-**Serialization:**
-- serde 1.0 (derive feature) - Serialization/deserialization framework
-- serde_json 1.0 - JSON serialization
-- toml 0.8 - TOML parsing for configuration and plugin files
-
-**Database:**
-- rusqlite 0.34 (bundled feature) - SQLite bindings with bundled SQLite library
+- `ratatui` 0.30 - Terminal UI framework (widget-based rendering)
+- `crossterm` 0.29 - Terminal backend (raw mode, events, alternate screen)
+- `tokio` 1.44 (full features) - Async runtime for the main event loop
 
 **Testing:**
-- mockall 0.13 (optional feature: test-mocks) - Trait mocking for testing
+- Built-in `#[test]` / `cargo test` - Test runner
+- `mockall` 0.13 - Mock generation for trait-based testing (optional via `test-mocks` feature)
+- `tempfile` 3 - Temporary directories for test isolation
 
-**Utilities:**
-- anyhow 1.0 - Error handling and context propagation
-- thiserror 2.0 - Custom error types
-- chrono 0.4 (serde feature) - Date/time handling with serialization support
-- uuid 1.16 (v4 feature) - UUID v4 generation for task IDs
-- which 7.0 - Find executables in PATH (detect agent availability)
-- directories 6.0 - Cross-platform directory resolution
+**Build/Dev:**
+- Cargo (standard Rust build system)
+- `include_str!()` macros - Compile-time embedding of plugin configs and skill files
 
 ## Key Dependencies
 
 **Critical:**
-- tokio - Enables async operations for background tasks (PR generation, background polling)
-- rusqlite - Bundles SQLite, no external database server required
-- anyhow - Standard error handling pattern throughout codebase
+- `ratatui` 0.30 - Entire UI rendering layer (`src/tui/app.rs`, `src/tui/shell_popup.rs`)
+- `crossterm` 0.29 - Terminal I/O, raw mode, key events (`src/main.rs`, `src/tui/app.rs`)
+- `rusqlite` 0.34 (bundled feature) - All data persistence via SQLite (`src/db/schema.rs`)
+- `tokio` 1.44 - Async main, background threads for PR operations (`src/main.rs`, `src/tui/app.rs`)
 
-**Build/Dev:**
-- crossterm - Provides terminal abstraction for ratatui
-- ratatui - TUI rendering engine, largest visual surface of application
-
-**Testing:**
-- mockall - Conditional feature for testing; enables mock implementations of Git, Tmux, and Agent trait operations
-- tempfile - Temporary filesystem operations for tests
+**Infrastructure:**
+- `anyhow` 1.0 - Error handling throughout all modules
+- `thiserror` 2.0 - Custom error type definitions
+- `serde` 1.0 (derive feature) - Serialization for config, models, and plugins
+- `serde_json` 1.0 - JSON parsing (GitHub CLI output)
+- `toml` 0.8 - TOML parsing for config files and plugins (`src/config/mod.rs`, `src/skills.rs`)
+- `chrono` 0.4 (serde feature) - DateTime handling for tasks and projects (`src/db/models.rs`)
+- `uuid` 1.16 (v4 feature) - Unique ID generation for tasks and projects (`src/db/models.rs`)
+- `which` 7.0 - Agent CLI binary detection (`src/agent/mod.rs`)
+- `directories` 6.0 - Platform-appropriate config/data directory resolution (`src/config/mod.rs`, `src/db/schema.rs`)
 
 ## Configuration
 
 **Environment:**
-- Configuration stored in:
-  - Global: `~/.config/agtx/config.toml` (GlobalConfig - agent defaults, theme colors, worktree settings)
-  - Per-project: `.agtx/config.toml` (ProjectConfig - project-specific overrides)
-  - Plugins: `.agtx/plugins/{name}/plugin.toml` (WorkflowPlugin configuration)
-- Uses standard XDG base directory paths via `directories` crate
+- No environment variables required for basic operation
+- `HOME` env var used for config path resolution (`src/config/mod.rs`)
+- `AGTX_INSTALL_DIR` optional env var in `install.sh` for custom install path
+- No `.env` files used; app is self-contained
+
+**Global Config:**
+- `~/.config/agtx/config.toml` - Global settings (default agent, theme, worktree config)
+- Managed by `GlobalConfig` in `src/config/mod.rs`
+
+**Project Config:**
+- `.agtx/config.toml` - Per-project overrides (agent, base branch, GitHub URL, plugin)
+- Managed by `ProjectConfig` in `src/config/mod.rs`
+
+**Plugin Config:**
+- `plugins/*/plugin.toml` - Workflow plugin definitions (bundled at compile time)
+- `.agtx/plugins/*/plugin.toml` - Project-local plugin overrides
+- `~/.config/agtx/plugins/*/plugin.toml` - User-global plugin overrides
+- Resolution order: project-local > user-global > bundled
 
 **Build:**
-- `Cargo.toml` - Primary build manifest
-- `Cargo.lock` - Dependency lock file for reproducible builds
-- Conditional feature: `test-mocks` enables mockall for integration tests
-
-**Agent Configuration Directories:**
-- `.claude/` - Claude Code CLI configuration
-- `.gemini/` - Google Gemini CLI configuration
-- `.codex/` - OpenAI Codex CLI configuration
-- `.github/agents/` - GitHub Copilot CLI configuration
-- `.config/opencode/` - OpenCode CLI configuration
-- All copied to worktrees automatically during initialization
+- `Cargo.toml` - Single workspace, single binary crate
+- Feature flags: `default = []`, `test-mocks` (enables `mockall` for testing)
 
 ## Platform Requirements
 
 **Development:**
-- Rust 1.70+ (for compilation)
-- Cargo (package manager, included with Rust)
+- Rust 1.70+ with Cargo
+- SQLite bundled via `rusqlite` (no system SQLite required)
+- Any Unix-like OS (Linux, macOS)
 
-**Runtime:**
-- Linux, macOS, or Windows (via crossterm abstraction)
-- tmux (required for agent session management; separate binary)
-- git (required for worktree operations; separate binary)
-- gh (GitHub CLI; required for PR operations via `gh pr create` and `gh pr view`)
-- One or more AI agent CLIs available on PATH:
-  - claude (Anthropic's Claude Code CLI)
-  - codex (OpenAI Codex CLI)
-  - copilot (GitHub Copilot CLI)
-  - gemini (Google Gemini CLI)
-  - opencode (OpenCode CLI)
+**Runtime Dependencies (external CLIs):**
+- `tmux` - Required; manages agent sessions (`src/tmux/mod.rs`, `src/tmux/operations.rs`)
+- `git` - Required; worktree management, branching, diffing (`src/git/`)
+- `gh` - Optional; GitHub PR creation and status checks (`src/git/provider.rs`)
+- At least one coding agent CLI (claude, codex, copilot, gemini, opencode) - Optional but needed for agent features
 
-**Production:**
-- Single binary deployment (fully self-contained except for external CLIs)
-- Database stored centrally in user config directory (no global setup required)
-- No external services required (all operations via local CLI tools)
+**Production/Release:**
+- Compiled binary, no runtime interpreter needed
+- Release targets (from `.github/workflows/release.yml`):
+  - `aarch64-apple-darwin` (macOS ARM)
+  - `x86_64-apple-darwin` (macOS Intel)
+  - `x86_64-unknown-linux-gnu` (Linux x86)
+  - `aarch64-unknown-linux-gnu` (Linux ARM)
 
-## Dependency Tree Summary
-
-```
-agtx (binary)
-├── ratatui (UI rendering)
-│   └── crossterm (terminal control)
-├── tokio (async runtime)
-├── rusqlite (bundled SQLite)
-├── serde/toml/serde_json (config serialization)
-├── chrono (timestamps)
-├── uuid (ID generation)
-├── anyhow (error handling)
-├── thiserror (error types)
-├── which (executable detection)
-└── directories (config paths)
-
-[dev-only]
-├── mockall (testing mocks)
-└── tempfile (test fixtures)
-```
-
-## Notable Compilation Features
-
-**Default:** None
-
-**Available:**
-- `test-mocks` - Includes mockall crate; enables mock trait implementations for `GitOperations`, `TmuxOperations`, `AgentOperations` (used in integration tests)
+**Data Storage:**
+- macOS: `~/Library/Application Support/agtx/` (via `directories` crate)
+- Linux: `~/.local/share/agtx/` (via `directories` crate)
+- Database files: `index.db` (global), `projects/{hash}.db` (per-project)
 
 ---
 

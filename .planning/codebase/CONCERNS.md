@@ -1,277 +1,190 @@
 # Codebase Concerns
 
-**Analysis Date:** 2025-03-03
+**Analysis Date:** 2026-03-03
 
 ## Tech Debt
 
-**Large monolithic app.rs file:**
-- Issue: The main TUI application logic is concentrated in a single 5,315-line file (`src/tui/app.rs`)
+**God Object: `src/tui/app.rs` (5315 lines):**
+- Issue: Single file contains all application logic -- state management, rendering, key handling, tmux orchestration, git operations, PR creation, plugin resolution, worktree setup, agent switching, ANSI parsing, file search, and skill deployment. It is the largest file by a factor of 10x over any other.
 - Files: `src/tui/app.rs`
-- Impact: Makes code difficult to navigate, test, and modify. High cognitive load for maintainers. Tight coupling between concerns.
-- Fix approach: Refactor into smaller modules with clear responsibilities (e.g., separate files for task operations, phase transitions, PR operations, phase status polling)
+- Impact: Extremely difficult to navigate, modify, or test. Nearly all new features require touching this file. High risk of merge conflicts when multiple changes are in flight.
+- Fix approach: Extract into focused modules. Candidates for extraction:
+  - Worktree setup logic (`setup_task_worktree`, `cleanup_task_for_done`, `cleanup_task_resources`, `delete_task_resources`) into `src/tui/worktree_setup.rs`
+  - PR creation flow (`generate_pr_description`, `create_pr_with_content`, `push_changes_to_existing_pr`) into `src/tui/pr.rs`
+  - Agent orchestration (`send_skill_and_prompt`, `wait_for_agent_ready`, `switch_agent_in_tmux`, `wait_for_prompt_trigger`, `is_agent_active`) into `src/tui/agent_orchestration.rs`
+  - Skill/plugin resolution (`resolve_skill_command`, `resolve_prompt`, `resolve_prompt_trigger`, `write_skills_to_worktree`) into `src/tui/plugin_resolution.rs`
+  - ANSI parsing (`parse_ansi_to_lines`) into `src/tui/ansi.rs`
+  - Key handlers (11 `handle_*_key` functions) could be grouped by feature area
 
-**Silent error suppression in copy_back_to_project:**
-- Issue: Copy-back failures during Working→Ready transition are only logged to stderr via `eprintln!()`, not propagated to UI
-- Files: `src/tui/app.rs:3836-3857` (copy_back_to_project function)
-- Impact: Users won't see copy-back errors in the TUI. Critical artifacts may silently fail to copy back to project root. Phase transition will still complete.
-- Fix approach: Return `Result<Vec<String>>` with warnings, display in UI like worktree initialization warnings. Make failures observable.
+**Duplicated Worktree Setup Code Across Three Entry Points:**
+- Issue: The functions `start_research()` (line 3250), `move_task_right()` (line 2986), and `move_backlog_to_running()` (line 3360) all contain nearly identical patterns: clone a dozen fields, build `SetupResult`, spawn a thread, call `setup_task_worktree`, then `send_skill_and_prompt`. The thread body is copy-pasted each time.
+- Files: `src/tui/app.rs` (lines ~2986, ~3250, ~3360)
+- Impact: Any change to the setup flow must be replicated in three places. Easy to miss one, causing subtle inconsistencies.
+- Fix approach: Extract a shared `spawn_task_setup()` method that takes a phase/status enum and handles the common pattern.
 
-**Database schema migrations use silent failures:**
-- Issue: Lines 95-99 in `src/db/schema.rs` use `let _ = ...` to silently ignore migration failures
-- Files: `src/db/schema.rs:95-99`
-- Impact: If a column already exists or migration fails, no error is logged. Silent failures make debugging difficult. Missing columns cause runtime panics.
-- Fix approach: Use SQLite's `CREATE ... IF NOT EXISTS` where applicable. For required columns, verify they exist after migrations and log actual errors.
+**Duplicated Artifact Archival Code:**
+- Issue: `cleanup_task_for_done()` (line 3875) and `cleanup_task_resources()` (line 3917) contain nearly identical artifact archival logic (copy .md files from `.agtx/` to archive dir).
+- Files: `src/tui/app.rs` (lines ~3882-3900, ~3927-3945)
+- Impact: Bug fixes or changes to archival logic must be applied twice.
+- Fix approach: Extract `archive_task_artifacts()` helper.
 
-**Unwrap_or_default() silently loses data on parse failures:**
-- Issue: DateTime parsing in database reads (lines 220-226, 305-309) uses `unwrap_or_else(|_| chrono::Utc::now())` to silently replace invalid timestamps
-- Files: `src/db/schema.rs:220-226, 305-309`
-- Impact: Corrupted or invalid timestamps in database are replaced with current time, losing task metadata. No visibility into data corruption.
-- Fix approach: Log parse failures with task context. Return error if timestamp parsing fails. Make corrupted data visible to user.
+**Unused `thiserror` Dependency:**
+- Issue: `thiserror = "2.0"` is declared in `Cargo.toml` but never imported or used anywhere in the codebase. All error handling uses `anyhow`.
+- Files: `Cargo.toml` (line 31)
+- Impact: Unnecessary compile-time dependency. Minor, but signals forgotten cleanup.
+- Fix approach: Remove `thiserror = "2.0"` from `Cargo.toml`.
 
-**Phase status cache uses global TTL for all phases:**
-- Issue: 2-second cache TTL in `refresh_sessions()` is shared across all phase types
-- Files: `src/tui/app.rs:3675` (CACHE_TTL constant)
-- Impact: Research phase artifacts (expensive disk operations) refresh every 2 seconds. No differentiation for phases with different artifact check costs.
-- Fix approach: Use phase-aware TTLs. Research: longer (5-10s). Planning/Running/Review: shorter (2s for responsiveness).
+**Unnecessary `tokio` Full Runtime:**
+- Issue: `tokio` is declared with `features = ["full"]` and `#[tokio::main]` is used, but the only `async` code is the `run()` event loop which uses `std::thread::spawn` for all background work and `mpsc::channel` (std, not tokio) for communication. No tokio async features (spawn, channels, IO, timers) are used.
+- Files: `Cargo.toml` (line 18), `src/main.rs` (line 13), `src/tui/app.rs` (line 412)
+- Impact: Adds ~200KB+ to binary size and compilation time for an unused runtime. The `async fn run()` and `.await` are vestigial.
+- Fix approach: Remove tokio dependency entirely. Change `async fn main()` to `fn main()`, `async fn run()` to `fn run()`.
 
-**No validation on plugin.toml artifact paths:**
-- Issue: Plugin artifact paths can contain `{phase}` placeholders that are expanded at runtime
-- Files: `src/config/mod.rs` (WorkflowPlugin loading), `src/tui/app.rs:4872` (phase_artifact_exists)
-- Impact: If plugin defines invalid artifact paths, phase detection silently returns false. Tasks appear stuck. No user feedback on misconfigured plugins.
-- Fix approach: Validate artifact path templates when plugin loads. Error on invalid placeholders. Test plugin on creation/selection.
+**Unused `serde_json` Dependency:**
+- Issue: `serde_json = "1.0"` is declared in `Cargo.toml` but grep shows no usage of `serde_json::` anywhere in source code. All serialization uses TOML.
+- Files: `Cargo.toml` (line 26)
+- Impact: Unnecessary dependency.
+- Fix approach: Remove from `Cargo.toml`.
 
-**Task cycle counter increments without validation:**
-- Issue: Cycle counter is incremented (line 3519) when transitioning Review→Planning, but phase templates use `{phase}` placeholder
-- Files: `src/tui/app.rs:3518-3519`
-- Impact: If plugin doesn't support `{phase}` placeholder, artifact detection will fail silently. Cyclic phase will appear broken.
-- Fix approach: Validate that plugin supports cyclic mode on load. Check that all artifact templates use `{phase}` if cyclic=true.
+**`AppState` Has 37+ Fields:**
+- Issue: The `AppState` struct (lines 63-139) has grown to contain 37+ fields covering board state, input state, UI popups (7 different popup types), channels, caches, and configuration. Many fields are `Option<T>` representing mutually exclusive states.
+- Files: `src/tui/app.rs` (lines 63-139)
+- Impact: Hard to reason about valid state combinations. Impossible to enforce state machine invariants at the type level.
+- Fix approach: Group related fields into sub-structs (e.g., `PopupState`, `BackgroundTaskState`, `CacheState`). Consider using an enum for mutually exclusive popup states.
 
 ## Known Bugs
 
-**PR description generation can fail silently in background thread:**
-- Symptoms: PR creation popup shows "Loading..." indefinitely, no error visible
-- Files: `src/tui/app.rs:1878-1914` (PR description generation), lines 4234-4265 (git diff generation)
-- Trigger: Run large git diff that fails, or agent command execution error in background thread
-- Workaround: Thread errors are caught but only logged to stderr. User sees spinning load indicator forever. Can close popup with Esc.
+**`DefaultHasher` for Database Path Hashing is Not Stable Across Rust Versions:**
+- Symptoms: If a user upgrades their Rust toolchain and `DefaultHasher`'s algorithm changes, the `hash_path()` function in `src/db/schema.rs` will produce a different hash for the same project path, causing the app to create a new empty database instead of finding the existing one. All tasks appear lost.
+- Files: `src/db/schema.rs` (lines 41-48)
+- Trigger: Rust toolchain upgrade that changes `DefaultHasher` internals (documented as not guaranteed stable).
+- Workaround: None. Data is not lost but becomes orphaned.
 
-**Copy-back race condition with project changes:**
-- Symptoms: Files may be lost or corrupted if project root is modified during phase transition
-- Files: `src/tui/app.rs:3749-3767` (copy-back on Working→Ready transition), `src/git/worktree.rs:73-167` (initialize_worktree)
-- Trigger: User manually edits project files while agent is running (Review phase)
-- Workaround: None. Recommeded: don't edit project root while task is in Review phase with copy_back configured.
-
-**Session name collision possible with parallel tasks:**
-- Symptoms: Multiple tasks with similar slugs could potentially collide in tmux session names
-- Files: `src/tui/app.rs:3859-3871` (generate_task_slug), variable task creation
-- Trigger: Create two tasks with identical titles in same project in quick succession
-- Workaround: Slugs include task ID prefix (8 chars), collision unlikely but not guaranteed unique
-
-**Pane content hash stability assumption:**
-- Symptoms: "Idle" detection triggers incorrectly if agent pauses for legitimate reasons
-- Files: `src/tui/app.rs:3726-3745` (idle detection logic)
-- Trigger: Agent working on task but not writing to terminal for 15+ seconds (e.g., thinking, API calls, file operations)
-- Workaround: None. Task will show "Idle" status but still be working. Phase detection still polls artifact files.
+**PR Number Defaults to 0 on Parse Failure:**
+- Symptoms: If the `gh pr create` output URL format changes, `pr_number` silently defaults to 0 instead of reporting an error. Subsequent operations referencing this PR number will fail or query the wrong PR.
+- Files: `src/git/provider.rs` (lines 89-93)
+- Trigger: Any `gh` CLI output format change where the PR number isn't the last path segment.
+- Workaround: None currently.
 
 ## Security Considerations
 
-**Single-quote escaping in shell commands:**
-- Risk: Potential shell injection if malicious task titles or descriptions are used in worktree operations
-- Files: `src/agent/mod.rs:51-59` (prompt escaping), `src/tmux/mod.rs:29` (session name escaping)
-- Current mitigation: Single quotes are escaped as `'\"'\"'` (close quote, escaped quote, open quote pattern)
-- Recommendations: Add unit tests for shell escaping with edge cases. Consider using argv arrays instead of shell strings where possible. Document shell escaping assumptions.
+**All Agents Run with Maximum Permissions:**
+- Risk: Agents are spawned with flags that bypass all safety prompts: `--dangerously-skip-permissions` (Claude), `--full-auto` (Codex), `--approval-mode yolo` (Gemini), `--allow-all-tools` (Copilot). This grants agents unrestricted file system access, arbitrary command execution, and network access in the worktree.
+- Files: `src/agent/mod.rs` (lines 41-57)
+- Current mitigation: Git worktree isolation provides some blast radius containment. Agents operate in `.agtx/worktrees/{slug}` rather than the main project directory.
+- Recommendations: This is an intentional design choice for autonomous operation, but consider: (1) documenting the security model explicitly for users, (2) offering a "supervised" mode that uses safer flags, (3) warning users on first run about the permissions model.
 
-**Environment variables not validated:**
-- Risk: `$` expansions in task descriptions could access environment variables
-- Files: `src/tui/app.rs` (task creation/editing), `src/agent/mod.rs` (command building)
-- Current mitigation: None explicit. Task descriptions are passed through escaping for tmux.
-- Recommendations: Document that task descriptions are user input, not trusted. Add examples of safe patterns. Consider warning users about env var substitution in agent CLIs.
+**Shell Command Injection via Task Titles/Descriptions:**
+- Risk: Task titles are used to generate branch names, session names, and worktree paths. While `generate_task_slug()` sanitizes to alphanumeric/hyphen/underscore, task descriptions are passed directly to `build_interactive_command()` which embeds them in shell commands using single-quote escaping. A description containing `'` followed by shell metacharacters could potentially escape the quoting.
+- Files: `src/agent/mod.rs` (line 51: `prompt.replace('\'', "'\"'\"'")`), `src/tui/app.rs` (various `build_interactive_command` calls)
+- Current mitigation: The single-quote escaping technique (`'` -> `'"'"'`) is the standard POSIX approach and should handle most cases. However, for agents with skill support, the prompt is sent via `tmux send-keys` instead, bypassing shell escaping entirely.
+- Recommendations: Audit the `send_keys` path to ensure tmux special characters in task content don't cause issues. Consider using `tmux send-keys -l` (literal mode) consistently.
 
-**Database file permissions:**
-- Risk: Project database files in `~/.config/agtx/projects/` inherit system default permissions (may be world-readable)
-- Files: `src/db/schema.rs:14-38` (database file creation)
-- Current mitigation: No explicit chmod. Relies on umask.
-- Recommendations: Set explicit file permissions (0600) after opening database. Harden config directory permissions.
-
-**GitHub credentials passed to gh CLI:**
-- Risk: PR creation uses `gh` CLI which requires GitHub authentication
-- Files: `src/git/provider.rs:64-97` (create_pr function)
-- Current mitigation: Relies on gh CLI's built-in credential handling
-- Recommendations: Document credential requirements. Add check for `gh auth status` before attempting PR ops. Handle auth failures gracefully.
-
-**Prompt text can contain arbitrary agent directives:**
-- Risk: Plugin prompts can include agent skill invocations or commands that might be unsafe
-- Files: `src/config/mod.rs` (WorkflowPlugin with prompts), `src/tui/app.rs:4646-4710` (resolve_prompt/resolve_skill_command)
-- Current mitigation: Only bundled plugins are shipped. Project plugins loaded from `.agtx/plugins/`.
-- Recommendations: Document plugin security model. Warn that custom plugins run arbitrary prompts. Add plugin signature validation if sharing becomes widespread.
+**Plugin `init_script` Runs Arbitrary Shell Commands:**
+- Risk: Plugin `init_script` fields execute arbitrary shell commands via `sh -c` in the worktree directory. A malicious plugin.toml could execute destructive commands.
+- Files: `src/tui/app.rs` (lines 4028-4050), `src/git/worktree.rs` (lines 145-163)
+- Current mitigation: Plugins are loaded from project-local `.agtx/plugins/`, global `~/.config/agtx/plugins/`, or bundled. Only bundled plugins are trusted.
+- Recommendations: Document that installing third-party plugins is equivalent to running untrusted code. Consider sandboxing init scripts or adding a confirmation prompt for non-bundled plugins.
 
 ## Performance Bottlenecks
 
-**Phase status polling on every 100ms tick:**
-- Problem: refresh_sessions() runs every 100ms in main loop, checks artifact existence for all active tasks
-- Files: `src/tui/app.rs:493` (called every poll), 3673-3775 (refresh_sessions implementation)
-- Cause: No debouncing of expensive operations. Disk I/O for glob matching happens frequently.
-- Improvement path: Increase base poll interval to 200-250ms. Implement per-task debouncing with individual timestamps. Cache glob results more aggressively.
+**100ms Polling Loop with Per-Task Tmux Subprocess Spawns:**
+- Problem: The main event loop polls every 100ms (`event::poll(Duration::from_millis(100))`). During `refresh_sessions()`, for each task in Planning/Running/Review, it spawns multiple tmux subprocesses (`window_exists`, `capture_pane`, `pane_current_command`) to check status. With N active tasks, this is O(N) subprocess spawns every ~2 seconds (cache TTL).
+- Files: `src/tui/app.rs` (line 479), `src/tui/app.rs` (lines 3693-3775 in `refresh_sessions`)
+- Cause: Each tmux operation spawns a new `tmux -L agtx` process. No batching of tmux queries.
+- Improvement path: Use a single `tmux list-windows -F` call to get all window info at once instead of per-task queries. Alternatively, use tmux control mode (`-C`) for persistent connection.
 
-**Research artifact glob matching performance:**
-- Problem: glob_path_exists() reads entire directory for each poll cycle
-- Files: `src/tui/app.rs:4911-4935` (glob_path_exists function), called from research_artifact_exists
-- Cause: No caching of directory contents. std::fs::read_dir is called repeatedly for same paths.
-- Improvement path: Cache directory listings with TTL. Use inotify/FSEvents for change detection instead of polling.
+**Shell Popup Captures 500 Lines Every 100ms:**
+- Problem: When the shell popup is open, `capture_tmux_pane_with_history` is called every 100ms loop iteration, spawning a subprocess to capture 500 lines of tmux history.
+- Files: `src/tui/app.rs` (lines 488-490)
+- Cause: No debouncing or diff-based updates for shell popup content.
+- Improvement path: Only re-capture when the user scrolls or after detecting pane content changes (content hash comparison).
 
-**Full task list loaded on every project switch:**
-- Problem: Database queries load all tasks even if only display column subset
-- Files: `src/tui/app.rs:3799` (Database::open_project), board initialization
-- Cause: No pagination or lazy loading of task columns
-- Improvement path: Implement cursor pagination. Load only displayed tasks initially. Load adjacent columns on-demand.
-
-**Shell popup content capture with 500-line buffer:**
-- Problem: Capturing 500 lines from tmux pane happens every 100ms when popup is open
-- Files: `src/tui/app.rs:489` (shell_popup cached_content refresh)
-- Cause: No content hashing or change detection before re-capturing
-- Improvement path: Hash pane content before capture. Only update if hash differs. Reduce capture interval when content stable.
-
-**Copy-back directory recursion without progress feedback:**
-- Problem: Large directory copies block UI during Working→Ready transition
-- Files: `src/tui/app.rs:3836-3857` (copy_back_to_project), `src/git/worktree.rs:170-183` (copy_dir_recursive)
-- Cause: Synchronous copy happens on main thread
-- Improvement path: Move copy_back to background thread. Show progress indicator. Allow cancellation.
+**Blocking `thread::sleep` Calls in Agent Orchestration:**
+- Problem: `wait_for_agent_ready()` blocks a thread for up to 30 seconds with 200ms sleep intervals. `wait_for_prompt_trigger()` blocks for up to 5 minutes. `switch_agent_in_tmux()` contains multiple blocking waits totaling up to ~12 seconds.
+- Files: `src/tui/app.rs` (lines 5120-5175, 4831-4869, 5027-5102)
+- Cause: Background threads with blocking sleeps. While these don't block the UI (they run in spawned threads), they tie up OS threads unnecessarily.
+- Improvement path: These are acceptable since they run in background threads. However, if thread count becomes a concern with many tasks, consider using async or a shared polling thread.
 
 ## Fragile Areas
 
-**Task status transition state machine:**
-- Files: `src/tui/app.rs:2000-2550` (handle_board_key, all status transitions)
-- Why fragile: Complex branching logic for different phase transitions. Cyclic phases add another dimension (Research→Planning→Running→Review→Planning cycle). Manual state validation at each transition point.
-- Safe modification: Add comprehensive unit tests for all transition paths. Use explicit state machine enum. Document preconditions for each transition.
-- Test coverage: No dedicated state machine tests. Transitions are tested indirectly through integration tests.
+**Agent Detection via Tmux Pane Content Scraping:**
+- Files: `src/tui/app.rs` (lines 4971-5013: `is_agent_active`), `src/tui/app.rs` (lines 5110-5175: `wait_for_agent_ready`), `src/tui/app.rs` (lines 5027-5102: `switch_agent_in_tmux`)
+- Why fragile: These functions rely on detecting specific strings in tmux pane output (e.g., `"Type your message"`, `"Yes, I accept"`, `">"`, `"%"`) to determine agent state. Any agent CLI update that changes prompt text, loading messages, or TUI layout will silently break detection. The `AGENT_READY_INDICATORS` and `AGENT_ACTIVE_INDICATORS` constants must be updated whenever agents change their UI.
+- Safe modification: Add new indicators to the const arrays. Never remove existing ones (old agent versions may still be in use). Test manually against each agent CLI version.
+- Test coverage: No automated tests. These functions depend on live tmux sessions and cannot be unit tested without significant mocking.
 
-**Phase artifact detection logic:**
-- Files: `src/tui/app.rs:4872-4907` (phase_artifact_exists, research_artifact_exists), plugin artifact configuration
-- Why fragile: Relies on consistent plugin configuration and artifact path templates. Silent failures if artifacts don't match expectations. glob_path_exists has single-wildcard limitation.
-- Safe modification: Validate artifact paths on plugin load. Add logging for artifact checks. Support multiple wildcard levels. Test with actual plugin files.
-- Test coverage: Basic artifact existence checks tested, but not glob matching edge cases or plugin misconfiguration scenarios.
+**`send_skill_and_prompt` Agent-Specific Branching:**
+- Files: `src/tui/app.rs` (lines 4720-4814)
+- Why fragile: This function has special-case behavior for `"gemini"` and `"codex"` (combine skill+prompt into single message), versus `"claude"` and `"opencode"` (send separately). Any new agent requires analyzing its CLI behavior and adding appropriate branching. The Ink TUI wait (lines 4750-4758) is a timing hack for Gemini/Codex rendering.
+- Safe modification: When adding a new agent, test all code paths: with skill+prompt, with prompt only, with neither. Check the agent handles tmux `send-keys` correctly.
+- Test coverage: No unit tests. Only covered by integration/manual testing.
 
-**Background thread communication with mpsc channels:**
-- Files: `src/tui/app.rs:1849-2070` (multiple spawn_session calls), 1978-2050 (PR creation), 3150-3195 (setup thread)
-- Why fragile: Multiple background threads (PR generation, PR creation, setup, diff) use different channel patterns. Manual channel ownership and error handling. No timeout on channel recv_timeout.
-- Safe modification: Extract background operation handling into utility function. Add timeout wrapper. Document channel lifecycle. Add tests for thread failures.
-- Test coverage: Mock infrastructure tests exist but don't cover all thread failure scenarios.
-
-**Copy files from project to worktree (initialize_worktree):**
-- Files: `src/git/worktree.rs:73-167` (initialize_worktree), returns Vec<String> warnings
-- Why fragile: Collects errors into warnings vector instead of failing. Partial failures aren't clearly visible. Silent skips for missing files. Complex nested directory logic with multiple failure modes.
-- Safe modification: Clearly separate fatal errors from warnings. Return detailed error info. Add summary of what was copied. Test with missing directories, permissions issues, symlinks.
-- Test coverage: Basic file copy tested. Edge cases (symlinks, permissions, large files) not tested.
-
-**Task cycle counter state in database:**
-- Files: `src/db/schema.rs:99` (cycle column), `src/tui/app.rs:3518-3519` (increment on transition)
-- Why fragile: Cycle counter must stay in sync with actual phase progression. If task is manually moved or phase detection fails, counter gets out of sync. No validation.
-- Safe modification: Derive cycle count from task history instead of storing. Or validate cycle before using in artifact path. Add migration helper to validate/fix cycle values.
-- Test coverage: Cycle tracking has basic tests but not desync scenarios.
+**Database Migration Strategy:**
+- Files: `src/db/schema.rs` (lines 94-99)
+- Why fragile: Migrations use `ALTER TABLE ... ADD COLUMN` with errors silently ignored (`let _ =`). This works for additive migrations but provides no mechanism for column type changes, data transformations, or schema version tracking. If a future migration requires modifying existing columns, there is no infrastructure for it.
+- Safe modification: Only add new `ALTER TABLE ... ADD COLUMN` lines. Never modify existing schema or column types. For complex migrations, would need to implement a version-tracked migration system.
+- Test coverage: `tests/db_tests.rs` covers basic CRUD but does not test migration paths (e.g., opening a database created by an older version).
 
 ## Scaling Limits
 
-**Single SQLite database per project:**
-- Current capacity: Tested with ~1000 tasks per project (untested limit)
-- Limit: SQLite performance degrades with large datasets. No partitioning or archiving. Index strategy optimizes by status, not by created_at range.
-- Scaling path: Implement task archiving (move old Done tasks to archive DB). Add date-range indices. Consider migration to PostgreSQL for projects with 10k+ tasks. Implement pagination.
+**Single SQLite Connection Per Database:**
+- Current capacity: One connection object per project database. All operations are synchronous on the main thread (except background PR creation which opens its own connection).
+- Limit: SQLite itself handles concurrent reads well but writes are serialized. With background threads also opening connections (line 2004: `Database::open_project` in PR creation thread, line 3161), concurrent write conflicts could occur under heavy use.
+- Scaling path: Use WAL mode (`PRAGMA journal_mode=WAL`) for better concurrent access. Consider connection pooling if multi-threaded access increases.
 
-**Tmux session namespace:**
-- Current capacity: Session names format is `task-{id}--{project}--{slug}` (e.g., 120-char max)
-- Limit: Very long project paths or task slugs could exceed tmux session name limits (255 chars on most systems)
-- Scaling path: Hash long paths instead of including full path. Document session naming limits. Validate on task creation.
-
-**Phase status cache size unbounded:**
-- Current capacity: HashMap grows with number of tasks in current project
-- Limit: No eviction policy. Old task entries stay in cache even after task is deleted. In projects with 1000+ tasks being created/deleted, cache grows indefinitely.
-- Scaling path: Use LRU cache with max size. Evict entries for deleted tasks. Periodically clean cache on task list refresh.
-
-**Copy-back file I/O with large artifacts:**
-- Current capacity: Synchronous copy blocks UI. Untested with artifacts >100MB
-- Limit: Large file copies (1GB+) will freeze TUI for 10+ seconds
-- Scaling path: Async copy in background. Progress indicator. Limit total copy_back size per task. Implement resume logic.
+**No Pagination for Tasks:**
+- Current capacity: All tasks for a project are loaded into memory (`get_all_tasks`, `get_tasks_by_status`).
+- Limit: With hundreds of tasks per project, rendering and memory usage will degrade. The board navigation (BoardState) stores all tasks in-memory as `Vec<Vec<Task>>`.
+- Scaling path: Implement task archival (partially exists for Done tasks) or pagination. Filter Done tasks from the default view.
 
 ## Dependencies at Risk
 
-**tokio full features enabled:**
-- Risk: Heavy dependency with all features enabled, adds to compile time and binary size
-- Impact: Overkill for current usage (only used for #[tokio::main]). Could cause maintenance burden.
-- Migration plan: Audit tokio usage. Likely only need tokio for blocking spawn_session calls. Could replace with std::thread.
-
-**Bundled SQLite via rusqlite:**
-- Risk: SQLite bundled feature bypasses system SQLite. Binary size increases (~5MB). Missing security patches until recompilation.
-- Impact: Can't benefit from system SQLite updates. Upgrade requires recompile.
-- Migration plan: Switch to system SQLite by removing `bundled` feature. Requires SQLite dev package installed. Trade: smaller binary, easier security updates.
-
-**No async runtime needed:**
-- Risk: tokio pulled in but app is fundamentally synchronous. Main loop uses std::thread::spawn, not async/await.
-- Impact: Unused dependency. Adds 10+ crates transitively.
-- Migration plan: Remove tokio. Use std::thread for all background work. Keep #[tokio::main] for compatibility if needed, or switch to plain fn main().
+**`DefaultHasher` Stability:**
+- Risk: `std::collections::hash_map::DefaultHasher` is explicitly documented as not guaranteed to produce the same output across Rust versions. It is used for database filename generation (`src/db/schema.rs` line 42) and idle detection content hashing (`src/tui/app.rs` line 3732).
+- Impact: Database filename hashing could silently break on Rust toolchain upgrade, orphaning user data. Content hashing for idle detection is transient and less critical.
+- Migration plan: Replace `DefaultHasher` in `hash_path()` with a deterministic hasher like `std::hash::SipHasher` (deprecated but stable) or a proper hash function from `sha2`/`blake3` crate. For the content hash (idle detection), `DefaultHasher` is fine since it only needs consistency within a single process run.
 
 ## Missing Critical Features
 
-**No task priority or ordering:**
-- Problem: Tasks displayed only by creation order. No way to prioritize urgent work.
-- Blocks: Triaging large backlogs becomes difficult. Can't surface high-impact tasks first.
-- Improvement: Add priority field (High/Medium/Low). Sort columns by priority then creation date. Allow drag-reorder in backlog.
+**No "Reopen" for Done Tasks:**
+- Problem: Once a task is moved to Done, its worktree is deleted and tmux window killed. The branch is preserved locally, but there is no mechanism to recreate the worktree from the branch and resume work.
+- Blocks: Users who need to revisit completed work must manually create worktrees and re-associate them.
 
-**No task search/filter beyond title:**
-- Problem: Only `/` command allows text search on title. No filtering by agent, status, date, description.
-- Blocks: Finding specific tasks in large backlogs requires scrolling through all tasks.
-- Improvement: Add filter panel. Support queries like `agent:claude status:running`. Index description text.
+**No Error Recovery for Failed Background Operations:**
+- Problem: Background thread failures (worktree setup, PR creation, agent switching) are reported as warning messages that auto-clear after 5 seconds. There is no retry mechanism, no error log, and no way to inspect past failures.
+- Blocks: Users may miss transient errors. Failed setups leave tasks in inconsistent states (e.g., status changed but no worktree created).
 
-**No task relationships or dependencies:**
-- Problem: Can't express "task B depends on task A". Can't bulk-operate on related tasks.
-- Blocks: Complex features that span multiple tasks can't be tracked as related units.
-- Improvement: Add task linking. Parent/child relationships. Block detection (can't run task until dependency done).
-
-**No bulk operations:**
-- Problem: Can only modify/delete one task at a time.
-- Blocks: Closing many tasks after sprint, archiving old tasks, agent/plugin bulk changes.
-- Improvement: Add multi-select mode. Bulk move, delete, or update operations.
-
-**No task history or audit trail:**
-- Problem: Can't see who/when a task status changed. No undo for accidental deletions.
-- Blocks: Can't audit work done. Can't recover accidentally deleted tasks.
-- Improvement: Track all state changes. Keep soft-delete option. Show task timeline.
+**No Concurrent Task Setup:**
+- Problem: `setup_rx` is a single `Option<Receiver>`, meaning only one worktree setup can be in progress at a time. Attempting to start a second task while one is setting up is silently ignored (`if self.state.setup_rx.is_some() { return Ok(()) }`).
+- Blocks: Users wanting to start multiple tasks rapidly must wait for each setup to complete.
 
 ## Test Coverage Gaps
 
-**app.rs key event handlers:**
-- What's not tested: Complex keyboard shortcut logic, popup interactions, tile navigation, multi-select scenarios
-- Files: `src/tui/app.rs:2400-2950` (all handle_*_key functions)
-- Risk: Regressions in UI interactions won't be caught. Branch coverage likely <30%.
-- Priority: **High** - Most user interactions go through these code paths
+**Zero Test Coverage for `src/tui/app.rs` Core Logic (5315 lines):**
+- What's not tested: The actual `App::new()`, `App::run()`, `draw_board()`, `handle_normal_key()`, `move_task_right()`, `start_research()`, `move_backlog_to_running()` -- essentially all orchestration logic that ties together the subsystems.
+- Files: `src/tui/app.rs`
+- Risk: The largest and most complex file has its tests in `src/tui/app_tests.rs` (2792 lines, ~145 tests), but these test extracted pure functions and helpers (slug generation, plugin resolution, skill deployment, prompt rendering). The integration between subsystems (database + tmux + git + agent) during task lifecycle transitions is untested.
+- Priority: High. This is where most bugs would occur -- in the orchestration logic that sequences background operations, state transitions, and error handling.
 
-**PR creation workflow (background thread interactions):**
-- What's not tested: PR description generation timeout, PR creation failure recovery, channel communication errors
-- Files: `src/tui/app.rs:1878-2050` (PR background threads), `src/git/provider.rs:64-97`
-- Risk: PR feature silently fails. Errors not visible to user. Can't test without mocking gh CLI.
-- Priority: **High** - Feature is critical path but untested
+**No Tests for Agent Orchestration Functions:**
+- What's not tested: `send_skill_and_prompt()`, `wait_for_agent_ready()`, `switch_agent_in_tmux()`, `wait_for_prompt_trigger()`, `is_agent_active()`
+- Files: `src/tui/app.rs` (lines ~4720-5175)
+- Risk: These functions contain the most fragile logic in the codebase (timing-dependent tmux pane scraping). Any agent CLI update could break them silently.
+- Priority: High. These are the most likely to regress and the hardest to debug in production.
 
-**Database migration/schema evolution:**
-- What's not tested: Schema changes on existing databases, column existence validation, migration rollback
-- Files: `src/db/schema.rs:69-102` (migration code)
-- Risk: Silent schema failures. Incompatibility with old database versions not detected.
-- Priority: **Medium** - Affects long-term data integrity
+**No Integration Tests for Task Lifecycle:**
+- What's not tested: Full task lifecycle (Backlog -> Planning -> Running -> Review -> Done) with mocked infrastructure. The mock infrastructure tests in `tests/mock_infrastructure_tests.rs` verify individual trait mock behavior but not the end-to-end flow.
+- Files: `tests/mock_infrastructure_tests.rs`
+- Risk: State machine bugs (wrong status transitions, missing cleanup, dangling tmux windows) would not be caught.
+- Priority: Medium. The unit tests for individual components are good, but the integration is untested.
 
-**Worktree initialization with various copy_files configurations:**
-- What's not tested: Missing source files, nested paths, symlinks, permission errors
-- Files: `src/git/worktree.rs:73-167` (initialize_worktree returns Vec<String> warnings)
-- Risk: Copy failures silently added to warnings list. Users may miss important setup failures.
-- Priority: **Medium** - Affects reproducibility of task environments
-
-**Plugin loading and artifact path resolution:**
-- What's not tested: Invalid plugin TOML, missing artifact fields, {phase} placeholder substitution, glob matching edge cases
-- Files: `src/config/mod.rs:WorkflowPlugin`, `src/tui/app.rs:4872-4935` (artifact existence checks)
-- Risk: Misconfigured plugins cause phase detection to fail. Cyclic phases silently break if artifact templates wrong.
-- Priority: **Medium** - Affects plugin ecosystem reliability
-
-**Phase status polling with cache TTL edge cases:**
-- What's not tested: Rapid task transitions, artifact appearing/disappearing during poll cycle, cache invalidation on task update
-- Files: `src/tui/app.rs:3673-3775` (refresh_sessions with cache logic)
-- Risk: Status can appear stale or ahead of reality. Copy-back timing issues.
-- Priority: **Low** - Hard to reproduce, affects edge cases
+**No Tests for Dashboard Mode:**
+- What's not tested: `handle_dashboard_key()`, `draw_dashboard()`, project switching, sidebar navigation.
+- Files: `src/tui/app.rs` (lines 2231-2280, 1528-1660)
+- Risk: Dashboard features could regress without notice.
+- Priority: Low. Dashboard is a secondary feature.
 
 ---
 
-*Concerns audit: 2025-03-03*
+*Concerns audit: 2026-03-03*

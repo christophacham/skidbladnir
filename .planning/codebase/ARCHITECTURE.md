@@ -4,227 +4,205 @@
 
 ## Pattern Overview
 
-**Overall:** Multi-layered TUI application with event-driven architecture, decoupled domain logic through trait-based dependency injection, and persistent task management with git-based workflow orchestration.
+**Overall:** Monolithic TUI application with module-based layering and trait-based dependency injection for external systems (tmux, git, agents).
 
 **Key Characteristics:**
-- State-separated architecture (terminal state independent from application state)
-- Trait-based abstractions for all external operations (tmux, git, agents)
-- Event loop driven by crossterm keyboard/event handling
-- Persistent SQLite storage for task metadata across sessions
-- Git worktree isolation for each task's execution context
-- Skill deployment system for agent-native discovery
+- Single-binary Rust TUI application using Ratatui + Crossterm
+- State machine architecture: `AppMode` (Dashboard/Project) and `InputMode` (Normal/InputTitle/InputDescription) govern behavior
+- External system interactions (tmux, git, agent CLIs) abstracted behind traits for testability via `mockall`
+- Background work offloaded to `std::thread::spawn` with `mpsc` channels for result communication
+- Plugin system customizes per-phase behavior through TOML configuration + embedded skill files
+- Centralized SQLite storage (global index + per-project task databases)
 
 ## Layers
 
-**Presentation (TUI):**
-- Purpose: Terminal UI rendering, keyboard input handling, state display
+**Entry Point / CLI:**
+- Purpose: Parse CLI arguments, handle first-run setup, launch TUI
+- Location: `src/main.rs`
+- Contains: Arg parsing (`AppMode` resolution), config migration, agent selection prompt
+- Depends on: `config`, `agent`, `git`, `tui`
+- Used by: Binary execution
+
+**TUI Layer:**
+- Purpose: Terminal UI rendering, event loop, user input handling, workflow orchestration
 - Location: `src/tui/`
-- Contains: App struct (event loop), board navigation, popup management, drawing functions
-- Depends on: Database (read tasks), Git operations, Tmux operations, Agent operations
-- Used by: main.rs entry point
-- Notes: Terminal state (`App { terminal, state: AppState }`) is separated from application state for borrow checker compliance
+- Contains: `App` struct (owns terminal + state), `AppState` (all runtime state), drawing functions, key handlers, task lifecycle orchestration
+- Depends on: `db`, `config`, `git`, `tmux`, `agent`, `skills`
+- Used by: `main.rs`
+- Key files:
+  - `src/tui/app.rs` (5315 lines) - Main application logic, event loop, rendering, key handling, task workflow
+  - `src/tui/board.rs` - `BoardState` kanban column/row navigation
+  - `src/tui/input.rs` - `InputMode` enum (Normal/InputTitle/InputDescription)
+  - `src/tui/shell_popup.rs` - Shell popup state, ANSI content trimming, rendering helpers
+  - `src/tui/app_tests.rs` - Unit tests for app.rs (2792 lines, included via `#[path]`)
 
-**Application Logic:**
-- Purpose: Task lifecycle management, phase transitions, validation
-- Location: `src/tui/app.rs` (event handlers, state mutations)
-- Contains: Move task, create task, advance phase, resume task logic
-- Depends on: Database, Git operations, Tmux operations
-- Used by: Presentation layer
-
-**Domain Models:**
-- Purpose: Core data structures and enums
-- Location: `src/db/models.rs`
-- Contains: `Task`, `TaskStatus`, `Project`, `RunningAgent`, `PhaseStatus` enums
-- Depends on: chrono for timestamps, uuid for IDs
-- Notes: TaskStatus enum defines the 5-column kanban board (Backlog → Planning → Running → Review → Done)
-
-**Persistence:**
-- Purpose: SQLite database operations
+**Database Layer:**
+- Purpose: SQLite persistence for tasks and projects
 - Location: `src/db/`
-- Contains: Schema initialization, CRUD operations for tasks and projects
-- Depends on: rusqlite with bundled SQLite
-- Storage:
-  - Global: `~/.config/agtx/index.db` (project index)
-  - Per-project: `~/.config/agtx/projects/{path_hash}.db` (tasks for specific project)
+- Contains: Schema creation, CRUD operations, data models
+- Depends on: `rusqlite`, `chrono`, `uuid`
+- Used by: `tui` (via `AppState.db` and `AppState.global_db`)
+- Key files:
+  - `src/db/schema.rs` - `Database` struct, SQL operations, migrations
+  - `src/db/models.rs` - `Task`, `Project`, `TaskStatus`, `PhaseStatus`, `RunningAgent` structs
 
-**External Integration Abstractions:**
-- Purpose: Mockable traits for testing and agent/git/tmux operations
-- Location: `src/git/`, `src/tmux/`, `src/agent/`, `src/config/`
-- Traits: `GitOperations`, `GitProviderOperations`, `TmuxOperations`, `AgentOperations`, `AgentRegistry`
-- Real implementations: `RealGitOps`, `RealGitHubOps`, `RealTmuxOps`, `RealAgentRegistry`
-- Mock implementations: Behind `#[cfg(feature = "test-mocks")]` gates
+**Git Layer:**
+- Purpose: Git worktree management, diff operations, branch management
+- Location: `src/git/`
+- Contains: Worktree create/remove/initialize, diff helpers, branch operations
+- Depends on: `std::process::Command` (git CLI), `config::WorkflowPlugin`
+- Used by: `tui` (via `AppState.git_ops`)
+- Key files:
+  - `src/git/mod.rs` - `is_git_repo`, `repo_root`, `current_branch`, `diff_stat`, `merge_branch`, `delete_branch`
+  - `src/git/worktree.rs` - `create_worktree`, `remove_worktree`, `initialize_worktree`, `copy_dir_recursive`
+  - `src/git/operations.rs` - `GitOperations` trait + `RealGitOps` implementation
+  - `src/git/provider.rs` - `GitProviderOperations` trait + `RealGitHubOps` (GitHub PR operations via `gh` CLI)
 
-**Configuration:**
-- Purpose: Global config persistence, per-project overrides, theme customization, workflow plugins
-- Location: `src/config/mod.rs`
-- Contains: `GlobalConfig` (default agent, theme, worktree settings), `ProjectConfig`, `ThemeConfig`, `WorkflowPlugin`, `MergedConfig` (global + project merged)
-- Storage: `~/.config/agtx/config.toml`
+**Tmux Layer:**
+- Purpose: Tmux session/window management for agent processes
+- Location: `src/tmux/`
+- Contains: Session lifecycle, pane capture, key sending, window management
+- Depends on: `std::process::Command` (tmux CLI)
+- Used by: `tui` (via `AppState.tmux_ops`)
+- Key files:
+  - `src/tmux/mod.rs` - `spawn_session`, `list_sessions`, `capture_pane`, `send_keys`, `kill_session`, `SessionInfo`
+  - `src/tmux/operations.rs` - `TmuxOperations` trait + `RealTmuxOps` implementation
 
-**Skill System:**
-- Purpose: Deploy agent-native command/skill files to worktrees at phase entry
+**Agent Layer:**
+- Purpose: Coding agent detection, command building, registry for multi-agent workflows
+- Location: `src/agent/`
+- Contains: Agent definitions, availability detection, interactive command construction, text generation
+- Depends on: `which` (binary detection), `std::process::Command`
+- Used by: `tui` (via `AppState.agent_registry`), `main.rs` (first-run detection)
+- Key files:
+  - `src/agent/mod.rs` - `Agent` struct, `known_agents()`, `detect_available_agents()`, `build_interactive_command()`, `build_spawn_args()`
+  - `src/agent/operations.rs` - `AgentOperations` trait, `CodingAgent` impl, `AgentRegistry` trait, `RealAgentRegistry`
+
+**Skills Layer:**
+- Purpose: Skill file management, agent-native path mapping, command translation
 - Location: `src/skills.rs`
-- Contains: Canonical skill content (embedded at compile time), agent-native path mapping, command transformations, plugin loading
-- Agents supported: claude, codex, copilot, gemini, opencode
-- Notes: Skills are stored in plugin directories and written to agent-native discovery paths (`.claude/commands/`, `.gemini/commands/`, etc.)
+- Contains: Compile-time embedded skills (`include_str!`), bundled plugin loading, agent-native directory mapping, command format translation
+- Depends on: `config::WorkflowPlugin`, `toml`
+- Used by: `tui` (skill deployment, command resolution)
+
+**Config Layer:**
+- Purpose: Global/project/merged configuration, workflow plugin definitions
+- Location: `src/config/mod.rs`
+- Contains: `GlobalConfig`, `ProjectConfig`, `MergedConfig`, `WorkflowPlugin`, `ThemeConfig`, phase agent overrides
+- Depends on: `serde`, `toml`, `directories`
+- Used by: All other layers
 
 ## Data Flow
 
-**Task Creation Flow:**
+**Task Lifecycle (Backlog to Done):**
 
-1. User presses `o` in Backlog column → `InputTitle` mode
-2. User enters title → `InputDescription` mode
-3. User enters prompt, presses Enter → Save to database (status=Backlog)
-4. Task appears in Backlog column
+1. User creates task in Backlog (title + description entered via TUI)
+2. Task persisted to project SQLite database (`db.create_task()`)
+3. User presses `m` to move to Planning:
+   - Git worktree created at `.agtx/worktrees/{slug}` (background thread via `setup_task_worktree`)
+   - Agent config dirs + plugin files copied to worktree (`initialize_worktree`)
+   - Skills deployed to agent-native paths (`write_skills_to_worktree`)
+   - Tmux window created with agent command (`tmux_ops.create_window`)
+   - Skill command + prompt sent to agent via tmux (`send_skill_and_prompt`)
+   - `SetupResult` sent back via `mpsc::channel` to update task in DB
+4. Phase artifact detection: `refresh_sessions()` polls every 100ms (2s cache TTL) checking for artifact files defined in plugin config
+5. User presses `m` to move Planning to Running: execute skill command sent to agent
+6. User presses `m` to move Running to Review: optionally creates PR (commit, push, `gh pr create`)
+7. User presses `m` to move Review to Done: archives artifacts, kills tmux window, removes worktree (branch preserved)
 
-**Task Lifecycle (Planning Phase):**
+**Background Operations Flow:**
 
-1. User presses `m` on Backlog task → Move to Planning
-2. `AppState.advance_task()` called:
-   - Create git worktree at `.agtx/worktrees/{task_slug}/`
-   - Copy agent config dirs (`.claude/`, `.gemini/`, etc.)
-   - Write plugin skills to agent-native paths
-   - Run plugin init script (if configured)
-   - Spawn tmux session `task-{id}--{project}--{slug}` in worktree
-   - Start agent with planning prompt/command
-3. Task status → Planning, session_name stored in DB
-4. Task appears in Planning column
-5. Planning artifact (`.agtx/artifacts/plan.txt`) signals phase completion
+1. Worktree setup: `std::thread::spawn` -> `setup_task_worktree()` -> `mpsc::Sender<SetupResult>`
+2. PR description generation: `std::thread::spawn` -> `generate_pr_description()` -> `mpsc::Sender<(String, String)>`
+3. PR creation: `std::thread::spawn` -> `create_pr_with_content()` -> `mpsc::Sender<Result<(i32, String), String>>`
+4. Main event loop checks `try_recv()` on each channel every 100ms poll cycle
 
-**Task Lifecycle (Running Phase):**
+**Agent Communication Flow:**
 
-1. User presses `m` on Planning task → Move to Running
-2. `AppState.advance_task()` called:
-   - Send `/execute` command (or equivalent per-agent) to tmux session
-   - Task status → Running
-3. Agent continues in same tmux window/session
-4. Running artifact signals phase completion
-
-**Task Lifecycle (Review Phase):**
-
-1. User presses `m` on Running task → Move to Review
-2. Task status → Review
-3. Optionally create PR:
-   - Fetch PR description in background thread
-   - Show PR confirmation popup
-   - Create PR via GitHub API (if PR number absent)
-   - Store `pr_number` and `pr_url` in DB
-   - Tmux session stays open for manual changes/rebasing
-
-**Task Lifecycle (Done):**
-
-1. User presses `m` on Review task → Move to Done
-2. If task has cyclic plugin:
-   - Offer to move back to Planning (increment cycle counter)
-3. If task doesn't have PR or PR is merged:
-   - Clean up worktree
-   - Clean up tmux session
-   - Keep git branch locally
+1. Agent started in tmux window with interactive command (`build_interactive_command`)
+2. `wait_for_agent_ready()` polls pane content + `pane_current_command` for readiness
+3. Skill command sent via `tmux_ops.send_keys()` (format translated per agent)
+4. Prompt sent separately or combined depending on agent type and `prompt_trigger` config
+5. Shell popup captures pane content with ANSI colors for live viewing
 
 **State Management:**
-
-- `AppState` holds all task state and UI state (board selection, popups, search dropdowns)
-- Database is single source of truth for task metadata
-- Tmux sessions are living processes tracked via session names
-- Git worktrees are persistent filesystems in `.agtx/worktrees/`
-- Phase status (Working/Idle/Ready/Exited) is runtime-only, computed from artifact files and tmux window state
+- All mutable state lives in `AppState` struct inside `App`
+- `App` owns both `terminal: Terminal` and `state: AppState` (split for borrow checker)
+- Drawing functions are static (`fn draw_*(state: &AppState, frame: &mut Frame, area: Rect)`)
+- Board navigation state in `BoardState` (selected column/row)
+- Multiple popup states tracked as `Option<T>` fields on `AppState`
+- Phase status cached in `HashMap<String, (PhaseStatus, Instant)>` with 2s TTL
+- Plugin instances cached per task to avoid repeated disk reads
 
 ## Key Abstractions
 
-**TaskStatus:**
-- Purpose: 5-column kanban board enum with string conversion
-- Examples: Backlog, Planning, Running, Review, Done
-- Pattern: Static method `columns()` returns all statuses in board order
-
-**Task:**
-- Purpose: Core domain model for a unit of work
-- Key fields: id, title, description, status, agent, plugin, session_name, worktree_path, branch_name, pr_number, cycle
-- Key methods: `new()`, `generate_session_name()`
-- Notes: `cycle` field enables cyclic workflows (Review → Planning with incrementing counter)
+**Trait-Based Dependency Injection:**
+- Purpose: Enable testing without real external systems
+- Examples: `src/tmux/operations.rs`, `src/git/operations.rs`, `src/git/provider.rs`, `src/agent/operations.rs`
+- Pattern: Trait defined with `#[cfg_attr(feature = "test-mocks", automock)]`, real impl wraps CLI commands, mock generated by `mockall` behind `test-mocks` feature flag
+- Injected via `Arc<dyn Trait>` in `AppState`
 
 **WorkflowPlugin:**
-- Purpose: Customize task lifecycle per phase
-- Fields: commands, prompts, artifacts, prompt_triggers, init_script, copy_dirs, copy_files, copy_back, cyclic, supported_agents
-- Resolution order: project-local `.agtx/plugins/{name}/` → global `~/.config/agtx/plugins/{name}/` → bundled
-- Per-task persistence: Plugin name stored in DB at task creation time
+- Purpose: Customizes task lifecycle behavior per phase
+- Examples: `plugins/agtx/plugin.toml`, `plugins/gsd/plugin.toml`, `plugins/void/plugin.toml`
+- Pattern: TOML configuration with commands, prompts, artifacts, prompt_triggers, copy_back, cyclic flag
+- Resolution: project-local `.agtx/plugins/{name}/` -> global `~/.config/agtx/plugins/{name}/` -> bundled (compile-time embedded)
 
-**BoardState:**
-- Purpose: Stateless navigation model for 5-column kanban board
-- Contains: `tasks: Vec<Task>`, `selected_column: usize`, `selected_row: usize`
-- Key methods: `tasks_in_column()`, `selected_task()`, `move_left()`, `move_right()`, `move_up()`, `move_down()`, `clamp_row()`
-- Pattern: All draw functions take `&BoardState` as immutable reference
+**MergedConfig:**
+- Purpose: Unified configuration merging global + project settings
+- Examples: `src/config/mod.rs`
+- Pattern: Project overrides take precedence over global defaults, per-phase agent overrides fall back to default agent
 
-**InputMode:**
-- Purpose: State machine for task entry UI
-- States: Normal, InputTitle, InputDescription
-- Usage: `AppState.input_mode` switches mode on each state change
-
-**PhaseStatus:**
-- Purpose: Runtime-only detection of phase completion
-- States: Working (spinner), Idle (no output 15s), Ready (artifact found), Exited (no tmux window)
-- Detection: Refresh every 100ms, cache results with 2-second TTL
-- Artifact paths: Come from task's plugin or agtx defaults
-
-**Trait Abstractions:**
-- `GitOperations`: create_worktree, initialize_worktree, git commands
-- `GitProviderOperations`: create_pull_request, get_pull_request
-- `TmuxOperations`: spawn_session, send_keys, get_window_content, list_windows, kill_window
-- `AgentOperations`: build_interactive_command, available agents
-- `AgentRegistry`: detect_available_agents, get_agent
+**AgentRegistry:**
+- Purpose: Maps agent names to `AgentOperations` implementations
+- Examples: `src/agent/operations.rs`
+- Pattern: `HashMap<String, Arc<dyn AgentOperations>>` with fallback to default agent
 
 ## Entry Points
 
-**Main Entry Point:**
+**Binary Entry (`main`):**
 - Location: `src/main.rs`
-- Triggers: `cargo run` or `./target/release/agtx`
-- Responsibilities:
-  - Parse CLI arguments (`-g` for dashboard, path for project)
-  - Detect AppMode (Dashboard or Project)
-  - Handle first-run configuration (prompt for default agent)
-  - Initialize and run App event loop
+- Triggers: User runs `agtx` or `agtx -g` or `agtx /path`
+- Responsibilities: Parse CLI args into `AppMode`, handle first-run config, create `App`, call `app.run()`
 
-**App Event Loop:**
-- Location: `src/tui/app.rs`
-- Method: `App::run()`
-- Responsibilities:
-  - Poll crossterm events every ~16ms (60 FPS)
-  - Route keyboard events to appropriate handlers
-  - Refresh phase status every 100ms
-  - Render board and popups via ratatui
-  - Handle background channel results (PR generation, PR creation)
-  - Gracefully cleanup terminal state on quit
+**Library Entry (`lib.rs`):**
+- Location: `src/lib.rs`
+- Triggers: Integration tests
+- Responsibilities: Re-exports all modules + `AppMode` enum
 
-**Database Entry Points:**
-- Project database: `Database::open_project(&project_path)`
-- Global database: `Database::open_global()`
-- Auto-initialize schema and run migrations on open
+**TUI Event Loop:**
+- Location: `src/tui/app.rs` line 412 (`App::run`)
+- Triggers: Called from `main()` after setup
+- Responsibilities: Draw loop (100ms poll), check background channel results, handle key events, refresh sessions, clear expired warnings
+
+**Key Handler Dispatch:**
+- Location: `src/tui/app.rs` line 1597 (`App::handle_key`)
+- Triggers: Any key press during event loop
+- Responsibilities: Route to appropriate handler based on active popup/input mode
 
 ## Error Handling
 
-**Strategy:** Use `anyhow::Result<T>` with `.context()` for error propagation. Gracefully handle missing resources (tmux sessions, worktrees, git branches).
+**Strategy:** `anyhow::Result` with `.context()` for all fallible operations. Graceful degradation for missing tmux sessions, worktrees, or agent binaries.
 
 **Patterns:**
-- Git operations that fail on missing branches: Return empty results, not errors
-- Tmux operations on missing sessions: Check session existence before operations
-- Database schema migrations: Use `ALTER TABLE ... ADD COLUMN` with silent error ignore (column may exist)
-- File operations: Wrap with context messages showing paths
+- Database operations return `anyhow::Result`, errors propagated to TUI
+- Git/tmux operations silently ignore failures where appropriate (e.g., cleanup on Done)
+- Background thread errors sent via `mpsc` channel, displayed as transient warning messages (5s auto-clear)
+- Worktree initialization collects warnings as `Vec<String>` instead of failing fatally
+- Plugin loading failures fall back to bundled `agtx` plugin via `load_bundled_plugin("agtx")`
 
 ## Cross-Cutting Concerns
 
-**Logging:** None currently (no logger dependency). Errors bubble up to TUI via Result types.
+**Logging:** No structured logging framework. `eprintln!` used for non-fatal warnings (worktree init, plugin script failures). Transient warning messages displayed in TUI footer.
 
-**Validation:**
-- Task title: Non-empty string required
-- Agent: Must be in available agents list
-- Plugin: Validated at load time, falls back to defaults
-- Phase transitions: Validated by AppState before advancing
+**Validation:** Minimal explicit validation. `TaskStatus::from_str` returns `Option` with `Backlog` fallback. Config parsing uses serde defaults.
 
-**Authentication:** GitHub PR operations use `gh` CLI (must be logged in). No explicit auth handling in app.
+**Authentication:** No internal auth. Relies on `gh` CLI being authenticated for GitHub PR operations. Agent CLIs handle their own auth.
 
-**Concurrency:**
-- PR description generation runs in std::thread spawned from event loop
-- Results communicated back via mpsc channel `pr_generation_rx`
-- PR creation also in background thread
-- Setup operations (worktree init) may run in background
-- All state mutations still happen on main event loop thread (single-threaded TUI)
+**Configuration Layering:** Three-tier: global (`~/.config/agtx/config.toml`) -> project (`.agtx/config.toml`) -> plugin (`plugin.toml`). Merged at app startup via `MergedConfig::merge()`.
 
-**Theming:** All colors stored in `ThemeConfig`, accessed via `hex_to_color()` helper, applied during rendering.
+**Phase Status Detection:** Artifact file polling with glob support. Four states: Working (spinner), Idle (15s no output), Ready (artifact found), Exited (no tmux window). Idle detection uses content hashing.
+
+---
+
+*Architecture analysis: 2026-03-03*

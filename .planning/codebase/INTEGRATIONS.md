@@ -4,193 +4,181 @@
 
 ## APIs & External Services
 
-**AI Coding Agents:**
-- Claude Code (Anthropic) - Primary agent
-  - CLI: `claude` executable
-  - Usage: `.build_interactive_command()` in `src/agent/mod.rs`
-  - Flags: `--dangerously-skip-permissions` (auto-approval mode)
-  - Session tracking: `--session {task_id}` support via `build_spawn_args()`
+**No direct API calls.** All external service interaction is through CLI subprocess invocations (`std::process::Command`). The application never makes HTTP requests or uses SDK clients directly.
 
-- Codex (OpenAI) - Alternative agent
-  - CLI: `codex` executable
-  - Flags: `--full-auto` (auto-approval mode)
+## CLI Tool Integrations
 
-- GitHub Copilot - Alternative agent
-  - CLI: `copilot` executable
-  - Flags: `--allow-all-tools` (tool approval)
+### tmux (Required)
 
-- Google Gemini - Alternative agent
-  - CLI: `gemini` executable
-  - Flags: `--approval-mode yolo` (full auto-approval)
+Session and window management for coding agents. All calls go through `tmux -L agtx` (dedicated server).
 
-- OpenCode - Alternative agent
-  - CLI: `opencode` executable
-  - No special flags
+- **Module:** `src/tmux/mod.rs`, `src/tmux/operations.rs`
+- **Trait:** `TmuxOperations` in `src/tmux/operations.rs` (mockable via `test-mocks` feature)
+- **Server name:** `agtx` (constant `AGENT_SERVER` in `src/tmux/mod.rs`)
+- **Operations used:**
+  - `new-session` / `has-session` - Session lifecycle
+  - `new-window` / `kill-window` / `list-windows` - Window lifecycle
+  - `send-keys` - Sending commands/prompts to agents
+  - `capture-pane` - Reading agent output (with `-e` for ANSI, `-J` for join)
+  - `display` - Cursor position, pane height, current command
+  - `resize-window` - Matching popup dimensions
 
-**GitHub Integration:**
-- GitHub CLI (`gh`) via `src/git/provider.rs:RealGitHubOps`
-  - PR creation: `gh pr create --title ... --body ... --head {branch}`
-  - PR state polling: `gh pr view {pr_number} --json state`
-  - Returns PR number and URL from create operation
-  - State tracking: Open, Merged, Closed, Unknown
-  - Used in `src/tui/app.rs` for PR creation workflow
+### git (Required)
+
+Worktree management, branching, diffing, and commit operations.
+
+- **Module:** `src/git/mod.rs`, `src/git/worktree.rs`, `src/git/operations.rs`
+- **Trait:** `GitOperations` in `src/git/operations.rs` (mockable via `test-mocks` feature)
+- **Operations used:**
+  - `worktree add/remove/prune` - Task isolation via worktrees
+  - `rev-parse` - Repository detection, branch resolution
+  - `branch -D` - Branch cleanup
+  - `diff`, `diff --cached`, `diff --stat` - Change visualization
+  - `ls-files` - File listing for fuzzy search
+  - `add -A`, `commit`, `push` - PR preparation
+  - `status --porcelain` - Change detection
+  - `merge --no-ff` - Branch merging
+
+### gh CLI (Optional)
+
+GitHub pull request operations.
+
+- **Module:** `src/git/provider.rs`
+- **Trait:** `GitProviderOperations` in `src/git/provider.rs` (mockable via `test-mocks` feature)
+- **Implementation:** `RealGitHubOps` struct
+- **Operations used:**
+  - `gh pr create --title --body --head` - Create pull requests
+  - `gh pr view --json state` - Check PR state (Open/Merged/Closed)
+- **Auth:** Relies on `gh auth` being configured (no env vars managed by agtx)
+
+### Coding Agent CLIs (At Least One Required)
+
+AI coding agents spawned in tmux sessions with auto-approve flags.
+
+- **Module:** `src/agent/mod.rs`, `src/agent/operations.rs`
+- **Traits:** `AgentOperations`, `AgentRegistry` in `src/agent/operations.rs`
+- **Detection:** `which` crate checks for CLI binary availability (`src/agent/mod.rs`)
+- **Supported agents:**
+
+| Agent | Binary | Interactive Flags | Print/Generate Mode | Skill Path |
+|-------|--------|-------------------|---------------------|------------|
+| Claude | `claude` | `--dangerously-skip-permissions` | `--print` | `.claude/commands/agtx/` |
+| Codex | `codex` | `--full-auto` | `exec --full-auto` | `.codex/skills/agtx-*/SKILL.md` |
+| Copilot | `copilot` | `--allow-all-tools` | `-p` | `.github/agents/agtx/` |
+| Gemini | `gemini` | `--approval-mode yolo` | `-p` | `.gemini/commands/agtx/` |
+| OpenCode | `opencode` | (none) | `-p` | `.config/opencode/command/` |
+
+- **Agent config:** defined in `known_agents()` in `src/agent/mod.rs`
+- **Generate text** (non-interactive): Used for PR description generation, runs agent in print mode via `AgentOperations::generate_text()` in `src/agent/operations.rs`
 
 ## Data Storage
 
 **Databases:**
-- SQLite (local filesystem)
-  - Connection: Bundled via `rusqlite` (no external server)
-  - Global index: `~/.config/agtx/index.db`
-  - Per-project: `~/.config/agtx/projects/{hash}.db` (hash of project path)
-  - Location function: `GlobalConfig::data_dir()` via `directories` crate
-  - Schema: `src/db/schema.rs`
-    - Global schema: Project index table
-    - Project schema: Tasks table with columns: id, title, description, status, agent, project_id, session_name, worktree_path, branch_name, pr_number, pr_url, plugin, created_at, updated_at, cycle
+- SQLite (bundled via `rusqlite` with `bundled` feature - no system SQLite dependency)
+  - Client: `rusqlite::Connection` in `src/db/schema.rs`
+  - Global index: `{data_dir}/index.db`
+  - Per-project: `{data_dir}/projects/{path_hash}.db`
+  - Data dir resolution: `directories::ProjectDirs::from("", "", "agtx")` data_dir
+    - macOS: `~/Library/Application Support/agtx/`
+    - Linux: `~/.local/share/agtx/`
+  - Schema init: `CREATE TABLE IF NOT EXISTS` with `ALTER TABLE ADD COLUMN` migrations (ignores errors if column exists)
+  - DateTime format: RFC3339 strings
 
 **File Storage:**
-- Local filesystem only
-  - Worktrees: `.agtx/worktrees/{task-slug}/` (git worktree directories)
-  - Configuration: `~/.config/agtx/` (global config)
-  - Plugins: `.agtx/plugins/{name}/` (project-local) or `~/.config/agtx/plugins/{name}/` (global)
-  - Database files: `~/.config/agtx/` (all SQLite databases)
+- Git worktrees at `.agtx/worktrees/{slug}/` within project directories
+- Skill files deployed to agent-native paths within worktrees
+- Configuration files on local filesystem (`~/.config/agtx/`)
 
 **Caching:**
-- Phase artifact polling with 2-second TTL cache in `src/tui/app.rs`
-- Plugin instance cache: `HashMap<Option<String>, Option<WorkflowPlugin>>` per task to avoid repeated disk reads
+- In-memory only: plugin instances cached in `HashMap<Option<String>, Option<WorkflowPlugin>>` per task
+- Artifact file existence cached with 2-second TTL (in `src/tui/app.rs`)
+- Tmux pane content cached in `ShellPopup.cached_content` (refreshed periodically)
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom GitHub authentication
-  - Method: Uses `gh` CLI for authentication (relies on user's existing GitHub auth)
-  - No API keys in config (leverages system `gh` session)
-  - Credentials: Stored in user's existing GitHub CLI config (`~/.config/gh/`)
-
-**Session Management:**
-- No centralized auth service
-- Agents manage their own authentication via their installed CLIs
-- Each agent CLI handles auth independently (Claude, Copilot, Gemini, Codex, OpenCode)
+- None. The application has no user authentication.
+- GitHub operations rely on pre-configured `gh auth` (managed externally by the user).
+- Coding agent CLIs handle their own authentication.
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- Not detected - No external error tracking service
+- None. Errors are handled via `anyhow::Result` and displayed in the TUI.
 
 **Logs:**
-- Console output only (piped through terminal UI)
-- No persistent logging framework
-- Errors propagated via `anyhow::Result` with context
-- All task state visible in kanban board UI
+- No logging framework. All output goes to the TUI.
+- Agent output visible via tmux pane capture.
 
 ## CI/CD & Deployment
 
-**Hosting:**
-- Single binary (Rust statically compiled)
-- No server component
-- No deployment service required
-
 **CI Pipeline:**
-- Not detected - No CI/CD integration configured
+- GitHub Actions (`.github/workflows/ci.yml`)
+- Triggers: push to `main`, PRs to `main`
+- Matrix: `ubuntu-latest` + `macos-latest` with `stable` Rust
+- Steps: build + test with `--features test-mocks`
+- Note: `cargo fmt` and `cargo clippy` checks are commented out
 
-**Artifact Management:**
-- Phase artifacts detected by file glob patterns (configurable per plugin)
-- Artifacts signal phase completion:
-  - Research phase: Plugin-defined artifact path
-  - Planning phase: Plugin-defined artifact path
-  - Running phase: Plugin-defined artifact path
-  - Review phase: Plugin-defined artifact path
-- Default artifacts for bundled "agtx" plugin: `.agtx/{research|plan|execute|review}.md`
+**Release Pipeline:**
+- GitHub Actions (`.github/workflows/release.yml`)
+- Triggers: tags matching `v*`
+- Builds 4 platform targets (macOS aarch64/x86_64, Linux x86_64/aarch64)
+- Creates GitHub Release with auto-generated notes via `softprops/action-gh-release@v2`
+- Produces `.tar.gz` archives per platform
 
-## Environment Configuration
-
-**Required env vars:**
-- `HOME` - Used for config/data directory resolution (standard Unix requirement)
-
-**Secrets location:**
-- No secrets in agtx itself
-- Depends on installed agent CLIs for their secrets:
-  - Claude: Uses ANTHROPIC_API_KEY (managed by claude CLI)
-  - OpenAI Codex: Uses OPENAI_API_KEY (managed by codex CLI)
-  - GitHub Copilot: Uses GitHub credentials (managed by copilot CLI)
-  - Gemini: Uses GOOGLE_API_KEY (managed by gemini CLI)
-  - OpenCode: Uses OpenCode credentials (managed by opencode CLI)
-
-**Configuration files:**
-- Global config: `~/.config/agtx/config.toml` (theme, default agent, worktree settings)
-- Project config: `.agtx/config.toml` (project-specific overrides)
-- Plugin config: `.agtx/plugins/{name}/plugin.toml` or `~/.config/agtx/plugins/{name}/plugin.toml`
+**Installation:**
+- `install.sh` - curl-pipe-bash installer fetching latest release from GitHub
+- Source repo: `fynnfluegge/agtx` on GitHub
+- Default install dir: `~/.local/bin/` (overridable via `AGTX_INSTALL_DIR`)
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- Not detected - No webhook endpoints
+- None
 
 **Outgoing:**
-- PR creation via `gh pr create` (GitHub API via CLI)
-- PR state polling via `gh pr view` (GitHub API via CLI)
-- No custom webhooks
+- None
 
-## External Tool Dependencies
+## Workflow Plugin System
 
-**Required at runtime:**
-- `tmux` - Terminal multiplexer for session management
-  - Server name: "agtx" (isolated from user sessions)
-  - Usage: `tmux -L agtx` commands in `src/tmux/mod.rs` and `src/tmux/operations.rs`
-  - Session structure: Per-project sessions with per-task windows
+Plugins define how agtx integrates with external tools during the task lifecycle.
 
-- `git` - Version control
-  - Worktree operations: `git worktree add/remove/list` in `src/git/worktree.rs`
-  - Branch operations: Create, detect, list branches
-  - Operations trait: `src/git/operations.rs` for testable abstraction
+**Bundled plugins** (compiled into binary via `include_str!()` in `src/skills.rs`):
 
-- `gh` - GitHub CLI
-  - PR operations: Create, view state
-  - Implementation: `src/git/provider.rs:RealGitHubOps`
-  - Fallback: Returns `PullRequestState::Unknown` if `gh` command fails
+| Plugin | Description | External Dependencies |
+|--------|-------------|----------------------|
+| `agtx` | Built-in skills workflow | None |
+| `gsd` | Get Shit Done framework | `npx get-shit-done-cc@latest` (npm package) |
+| `spec-kit` | GitHub spec-kit | None |
+| `void` | No prompting | None |
 
-- One of: `claude`, `codex`, `copilot`, `gemini`, `opencode`
-  - Agent discovery: `which {agent_name}` via `which` crate
-  - Detection: `src/agent/mod.rs:detect_available_agents()`
-  - At least one must be available to run tasks
-
-## Plugin System
-
-**Bundled Plugins:**
-- agtx - Default workflow with phase skills and basic artifact detection
-- gsd - Get Shit Done framework (spec-driven development)
-  - Init: `npx get-shit-done-cc@latest --{agent} --local --non-interactive`
-  - Supported agents: claude, codex, gemini, opencode
-  - Cyclic: Yes (allows Review → Planning transitions)
-
-- spec-kit - Specification-driven development by GitHub
-  - Requires `.specify` directory in project
-
-- void - Plain agent session (no prompting)
-
-**Plugin Resolution Order:**
+**Plugin resolution order** (in `WorkflowPlugin::load()` at `src/config/mod.rs`):
 1. Project-local: `.agtx/plugins/{name}/plugin.toml`
-2. Global: `~/.config/agtx/plugins/{name}/plugin.toml`
-3. Bundled: Compiled into binary
+2. User-global: `~/.config/agtx/plugins/{name}/plugin.toml`
+3. Bundled: compiled-in from `plugins/{name}/plugin.toml`
 
-## Skill System
+**Plugin capabilities:**
+- `commands` - Slash commands sent to agents per phase
+- `prompts` - Task content templates with `{task}`, `{task_id}`, `{phase}` placeholders
+- `artifacts` - File paths signaling phase completion (supports `*` wildcards)
+- `init_script` - Shell command run in worktree before agent starts
+- `copy_dirs` / `copy_files` - Files to copy into worktrees
+- `copy_back` - Files to copy from worktree back to project root on phase completion
+- `cyclic` - Enables Review to Planning transition for multi-phase workflows
+- `supported_agents` - Agent whitelist
 
-**Deployment:**
-- Markdown files with YAML frontmatter deployed to agent-native discovery paths
-- Canonical path: `.agtx/skills/agtx-{phase}/SKILL.md`
-- Agent-specific paths (auto-deployed):
-  - Claude: `.claude/commands/agtx/{phase}.md`
-  - Gemini: `.gemini/commands/agtx/{phase}.toml` (auto-converted to TOML)
-  - Codex: `.codex/skills/agtx-{phase}/SKILL.md`
-  - OpenCode: `.config/opencode/command/agtx-{phase}.md` (frontmatter stripped)
-  - Copilot: `.github/agents/agtx/{phase}.md`
+## Environment Configuration
 
-**Command Translation:**
-- Canonical format: `/ns:command` (slash-colon)
-- Transformed per-agent:
-  - Claude/Gemini: `/ns:command` (unchanged)
-  - OpenCode: `/ns-command` (colon → hyphen)
-  - Codex: `$ns-command` (slash → dollar, colon → hyphen)
-  - Copilot: Prompt-only (no interactive skill invocation)
+**Required env vars:**
+- `HOME` - Used for config path resolution (always available on Unix)
+
+**Optional env vars:**
+- `AGTX_INSTALL_DIR` - Custom install directory (used by `install.sh` only)
+
+**Secrets location:**
+- No secrets managed by agtx
+- Agent CLI tools manage their own API keys/tokens
+- `gh` CLI manages its own GitHub authentication
 
 ---
 
