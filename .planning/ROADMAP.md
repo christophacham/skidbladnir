@@ -35,11 +35,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Structured logs rotate to disk with configurable levels and non-blocking writes
   4. Daemon shuts down cleanly on SIGTERM/SIGINT without orphaned resources
   5. Configuration changes take effect without restarting the daemon process
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Cargo workspace restructuring + agtxd daemon with REST API skeleton, health endpoint, and graceful shutdown
+- [ ] 01-02-PLAN.md — Multi-layer structured logging and config file hot-reload
 
 ### Phase 2: PTY Process Management
 **Goal**: Daemon can spawn agent processes with PTY pairs and manage their full lifecycle (read, write, resize, cleanup, tracking)
@@ -191,7 +191,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Daemon Foundation | 0/2 | Not started | - |
+| 1. Daemon Foundation | 0/2 | Planning | - |
 | 2. PTY Process Management | 0/2 | Not started | - |
 | 3. WebSocket Streaming | 0/2 | Not started | - |
 | 4. Frontend Kanban Board | 0/2 | Not started | - |
