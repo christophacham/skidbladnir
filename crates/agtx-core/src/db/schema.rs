@@ -10,6 +10,32 @@ pub struct Database {
 }
 
 impl Database {
+    /// Open or create a database at an explicit filesystem path.
+    /// Used by the daemon and tests where the path is already known.
+    pub fn open_at(db_path: &Path) -> Result<Self> {
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let conn = Connection::open(db_path)
+            .with_context(|| format!("Failed to open database at {:?}", db_path))?;
+        let db = Self { conn };
+        db.init_project_schema()?;
+        Ok(db)
+    }
+
+    /// Open or create a global index database at an explicit filesystem path.
+    /// Used by the daemon and tests where the path is already known.
+    pub fn open_global_at(db_path: &Path) -> Result<Self> {
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let conn = Connection::open(db_path)
+            .with_context(|| format!("Failed to open global database at {:?}", db_path))?;
+        let db = Self { conn };
+        db.init_global_schema()?;
+        Ok(db)
+    }
+
     /// Open or create a project database (stored centrally in config dir)
     pub fn open_project(project_path: &Path) -> Result<Self> {
         let config_dir = directories::ProjectDirs::from("", "", "agtx")
