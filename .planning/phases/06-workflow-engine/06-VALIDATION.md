@@ -2,8 +2,8 @@
 phase: 6
 slug: workflow-engine
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-04
 ---
 
@@ -38,27 +38,30 @@ created: 2026-03-04
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 06-01-01 | 01 | 1 | FLOW-02 | unit | `cargo test -p agtx-core plugin_resolution` | Partial | ⬜ pending |
-| 06-01-02 | 01 | 1 | FLOW-03 | unit | `cargo test -p agtx-core skill_deployment` | ❌ W0 | ⬜ pending |
-| 06-01-03 | 01 | 1 | FLOW-04 | unit | `cargo test -p agtx-core command_resolution` | Partial | ⬜ pending |
-| 06-02-01 | 02 | 2 | FLOW-01 | integration | `cargo test -p agtxd advance_task` | ❌ W0 | ⬜ pending |
-| 06-02-02 | 02 | 2 | FLOW-05 | unit | `cargo test -p agtxd artifact_detection` | ❌ W0 | ⬜ pending |
-| 06-02-03 | 02 | 2 | FLOW-06 | unit | `cargo test -p agtxd cyclic_advance` | ❌ W0 | ⬜ pending |
-| 06-03-01 | 03 | 3 | FLOW-07 | integration | `cd web && npx vitest run pr` | ❌ W0 | ⬜ pending |
-| 06-03-02 | 03 | 3 | FLOW-08 | unit | `cd web && npx vitest run diff` | ❌ W0 | ⬜ pending |
+| 06-01-00 | 01 | 1 | FLOW-01..06 | stub | `cargo test -p agtx-core workflow_core_tests` | Created by Task 0 | W0 |
+| 06-01-01 | 01 | 1 | FLOW-02 | unit | `cargo test -p agtx-core plugin_resolution` | Partial | pending |
+| 06-01-02 | 01 | 1 | FLOW-03 | unit | `cargo test -p agtx-core skill_deployment` | Created by 06-01 Task 0 | pending |
+| 06-01-03 | 01 | 1 | FLOW-04 | unit | `cargo test -p agtx-core command_resolution` | Partial | pending |
+| 06-02-00 | 02 | 2 | FLOW-01,06 | stub | `cd web && npx vitest run workflow` | Created by Task 0 | W0 |
+| 06-02-01 | 02 | 2 | FLOW-01 | integration | `cargo test -p agtxd advance_task` | Created by 06-01 Task 0 | pending |
+| 06-02-02 | 02 | 2 | FLOW-05 | unit | `cargo test -p agtxd artifact_detection` | Created by 06-01 Task 0 | pending |
+| 06-02-03 | 02 | 2 | FLOW-06 | unit | `cargo test -p agtxd cyclic_advance` | Created by 06-01 Task 0 | pending |
+| 06-03-00 | 03 | 3 | FLOW-08 | stub | `cd web && npx vitest run DiffView` | Created by Task 0 | W0 |
+| 06-03-01 | 03 | 3 | FLOW-07 | integration | `cd web && npx vitest run pr` | Created by 06-02 Task 0 | pending |
+| 06-03-02 | 03 | 3 | FLOW-08 | unit | `cd web && npx vitest run diff` | Created by 06-03 Task 0 | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: W0 = wave 0 stub, pending = not started, green = passing, red = failing, flaky = intermittent*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `crates/agtxd/tests/workflow_tests.rs` — stubs for FLOW-01, FLOW-05, FLOW-06
-- [ ] `crates/agtx-core/tests/workflow_core_tests.rs` — stubs for FLOW-02, FLOW-03, FLOW-04
-- [ ] `web/src/lib/stores/__tests__/workflow.test.ts` — stubs for frontend advance/PR actions
-- [ ] `web/src/lib/components/__tests__/DiffView.test.ts` — stubs for FLOW-08 diff rendering
+- [x] `crates/agtxd/tests/workflow_tests.rs` — stubs for FLOW-01, FLOW-05, FLOW-06 (created by 06-01 Task 0)
+- [x] `crates/agtx-core/tests/workflow_core_tests.rs` — real tests for FLOW-02, FLOW-03, FLOW-04 (created by 06-01 Task 0)
+- [x] `web/src/lib/stores/__tests__/workflow.test.ts` — stubs for frontend advance/PR actions (created by 06-02 Task 0)
+- [x] `web/src/lib/components/__tests__/DiffView.test.ts` — stubs for FLOW-08 diff rendering (created by 06-03 Task 0)
 
-*Existing test infrastructure covers framework installation — no new framework needed.*
+*Wave 0 stubs are created as Task 0 within each plan, running before implementation tasks.*
 
 ---
 
@@ -73,11 +76,11 @@ created: 2026-03-04
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
