@@ -3,7 +3,17 @@
 	import { taskStore } from '$lib/stores/tasks.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 
-	let searchInput: HTMLInputElement;
+	let searchInput = $state<HTMLInputElement | null>(null);
+
+	const searchActive = $derived(taskStore.searchQuery.trim().length > 0);
+	const matchCount = $derived(taskStore.matchingIds.size);
+	const totalCount = $derived(taskStore.list.length);
+
+	const placeholder = $derived(
+		searchActive
+			? `${matchCount} of ${totalCount} matches`
+			: 'Search tasks... (/)'
+	);
 
 	$effect(() => {
 		if (uiStore.searchFocused && searchInput) {
@@ -15,6 +25,7 @@
 	function handleSearchKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
 			taskStore.searchQuery = '';
+			uiStore.searchFocused = false;
 			searchInput?.blur();
 		}
 	}
@@ -41,7 +52,7 @@
 			bind:value={taskStore.searchQuery}
 			onkeydown={handleSearchKeydown}
 			type="text"
-			placeholder="Search tasks... (/)"
+			placeholder={placeholder}
 			class="w-full px-3 py-1.5 rounded-md text-sm outline-none transition-colors"
 			style="
 				background-color: color-mix(in srgb, var(--color-surface) 60%, transparent);

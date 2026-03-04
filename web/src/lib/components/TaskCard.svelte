@@ -34,7 +34,7 @@
 </script>
 
 <button
-	class="group w-full text-left rounded-lg p-3 cursor-pointer transition-opacity relative"
+	class="group w-full text-left rounded-lg p-3 cursor-pointer transition-opacity duration-150 relative"
 	class:opacity-30={dimmed}
 	style="background-color: var(--color-surface); border: 1px solid var(--color-border);"
 	onmouseenter={(e) => {
