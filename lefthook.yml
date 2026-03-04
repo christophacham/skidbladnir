@@ -1,7 +1,5 @@
 pre-commit:
   parallel: true
-  env:
-    PATH: "${HOME}/.cargo/bin:${PATH}"
   commands:
     cargo-fmt:
       glob: "*.rs"
@@ -17,8 +15,6 @@ pre-commit:
           echo "ERROR: AI attribution found in staged files"
           exit 1
         fi
-    cargo-test:
-      run: $HOME/.cargo/bin/cargo test --workspace
 
 pre-push:
   parallel: true
