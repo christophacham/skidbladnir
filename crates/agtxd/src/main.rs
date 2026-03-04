@@ -66,7 +66,7 @@ async fn main() -> Result<()> {
     Database::open_global_at(&global_db_path).context("Failed to initialize global database")?;
 
     // Build application state and router
-    let state = AppState::new(db_path, global_db_path);
+    let state = AppState::new(db_path, global_db_path, config);
     let app = api::api_router()
         .with_state(state)
         .layer(tower_http::trace::TraceLayer::new_for_http());
