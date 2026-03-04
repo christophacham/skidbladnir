@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { PrResponse } from '$lib/types';
 	import { taskStore } from '$lib/stores/tasks.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { wsStore } from '$lib/stores/websocket.svelte';
@@ -7,6 +8,9 @@
 	import InputBar from './InputBar.svelte';
 	import StatusDot from './StatusDot.svelte';
 	import TabBar from './TabBar.svelte';
+	import DiffView from './DiffView.svelte';
+	import PrTab from './PrTab.svelte';
+	import PrModal from './PrModal.svelte';
 
 	const agentColors: Record<string, string> = {
 		claude: 'bg-purple-500/20 text-purple-300',
@@ -28,6 +32,11 @@
 
 	let activeTab = $state<string>('output');
 	let prState = $state<string | null>(null);
+	let showHeaderPrModal = $state(false);
+
+	const showCreatePrButton = $derived(
+		task?.status === 'Review' && !task?.pr_number
+	);
 
 	const tabs = $derived([
 		{ id: 'output', label: 'Output', visible: true },
@@ -76,6 +85,15 @@
 			wsStore.disconnect();
 		};
 	});
+
+	function handleHeaderPrCreated(pr: PrResponse) {
+		if (!task) return;
+		const updated = { ...task, pr_number: pr.pr_number, pr_url: pr.pr_url };
+		taskStore.updateTask(updated);
+		showHeaderPrModal = false;
+		prState = 'open';
+		activeTab = 'pr';
+	}
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
@@ -126,6 +144,16 @@
 			<span class="text-xs px-2 py-0.5 rounded-full shrink-0 {badgeClass}">
 				{task.agent}
 			</span>
+			{#if showCreatePrButton}
+				<button
+					onclick={() => (showHeaderPrModal = true)}
+					class="px-3 py-1.5 text-xs rounded-md cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+					style="color: var(--color-accent); border: 1px solid var(--color-accent);"
+					title="Create pull request"
+				>
+					Create PR
+				</button>
+			{/if}
 			{#if task.status !== 'Done'}
 				<button
 					onclick={() => taskStore.advance(task.id)}
@@ -169,19 +197,17 @@
 				</div>
 			{/if}
 		{:else if activeTab === 'diff'}
-			<div
-				style="color: var(--color-dimmed);"
-				class="flex-1 flex items-center justify-center"
-			>
-				Diff view coming soon
-			</div>
+			<DiffView taskId={task.id} />
 		{:else if activeTab === 'pr'}
-			<div
-				style="color: var(--color-dimmed);"
-				class="flex-1 flex items-center justify-center"
-			>
-				PR view coming soon
-			</div>
+			<PrTab {task} />
+		{/if}
+
+		{#if showHeaderPrModal && task}
+			<PrModal
+				{task}
+				onclose={() => (showHeaderPrModal = false)}
+				oncreated={handleHeaderPrCreated}
+			/>
 		{/if}
 	{/if}
 </div>
