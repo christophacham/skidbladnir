@@ -2,7 +2,6 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde_json::Value;
-use std::path::PathBuf;
 use tower::ServiceExt;
 
 /// Helper to build the app with temp databases
