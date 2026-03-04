@@ -1,4 +1,6 @@
-use agtxd::session::{SessionOutput, SessionState};
+use std::path::PathBuf;
+
+use agtxd::session::{SessionManager, SessionOutput, SessionState, SpawnRequest};
 
 /// Test 1: SessionOutput::new creates file at specified path and initializes empty ring buffer
 #[tokio::test]
@@ -125,4 +127,179 @@ fn test_session_state_display() {
     assert_ne!(SessionState::Spawning, SessionState::Running);
     assert_ne!(SessionState::Running, SessionState::Exited(0));
     assert_eq!(SessionState::Exited(42), SessionState::Exited(42));
+}
+
+// ==========================================================================
+// Task 2: SessionManager tests
+// ==========================================================================
+
+/// Helper to create a SpawnRequest for a shell command
+fn shell_spawn_request(cmd: &str, tmp_dir: &std::path::Path) -> SpawnRequest {
+    SpawnRequest {
+        command: "sh".to_string(),
+        args: vec!["-c".to_string(), cmd.to_string()],
+        working_dir: tmp_dir.to_path_buf(),
+        env: vec![],
+        cols: 80,
+        rows: 24,
+    }
+}
+
+/// Test 1 (PTY-01): spawn() creates a session, returns UUID;
+/// session appears in list(); get() returns SessionInfo with Running state and non-zero PID
+#[tokio::test]
+async fn test_spawn_creates_session_in_list_with_running_state() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    let req = shell_spawn_request("sleep 10", tmp.path());
+    let id = mgr.spawn(req).await.unwrap();
+
+    // Session should appear in list
+    let list = mgr.list().await;
+    assert_eq!(list.len(), 1, "Should have exactly one session");
+    assert_eq!(list[0].id, id, "Listed session ID should match");
+
+    // get() should return Running state
+    let info = mgr.get(id).await.expect("Session should exist");
+    assert_eq!(info.state, SessionState::Running, "State should be Running");
+    assert!(info.pid > 0, "PID should be non-zero");
+
+    // Cleanup
+    mgr.kill(id).await.unwrap();
+}
+
+/// Test 2 (PTY-02): spawn a process that prints known output;
+/// wait briefly; read output via get_output() and verify it contains "hello"
+#[tokio::test]
+async fn test_spawn_captures_output() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    let req = shell_spawn_request("echo hello && sleep 2", tmp.path());
+    let id = mgr.spawn(req).await.unwrap();
+
+    // Wait for output to be captured
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    let output = mgr.get_output(id).await.expect("Should have output");
+    let output_str = String::from_utf8_lossy(&output);
+    assert!(
+        output_str.contains("hello"),
+        "Output should contain 'hello', got: {:?}",
+        output_str
+    );
+
+    // Cleanup
+    mgr.kill(id).await.unwrap();
+}
+
+/// Test 3 (PTY-03): spawn `cat` (reads stdin, echoes to stdout);
+/// write "test input" via write(); wait briefly; verify output contains "test input"
+#[tokio::test]
+async fn test_write_sends_input_to_pty() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    let req = shell_spawn_request("cat", tmp.path());
+    let id = mgr.spawn(req).await.unwrap();
+
+    // Give cat a moment to start
+    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+    // Write input
+    mgr.write(id, "test input").await.unwrap();
+
+    // Wait for echo
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    let output = mgr.get_output(id).await.expect("Should have output");
+    let output_str = String::from_utf8_lossy(&output);
+    assert!(
+        output_str.contains("test input"),
+        "Output should contain 'test input', got: {:?}",
+        output_str
+    );
+
+    // Cleanup
+    mgr.kill(id).await.unwrap();
+}
+
+/// Test 4 (PTY-04): spawn a process; call resize(id, 40, 120);
+/// verify no error (resize is fire-and-forget)
+#[tokio::test]
+async fn test_resize_succeeds() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    let req = shell_spawn_request("sleep 10", tmp.path());
+    let id = mgr.spawn(req).await.unwrap();
+
+    // Resize should succeed without error
+    mgr.resize(id, 40, 120).await.unwrap();
+
+    // Cleanup
+    mgr.kill(id).await.unwrap();
+}
+
+/// Test 5 (PTY-06): spawn a process; verify session info contains correct PID
+#[tokio::test]
+async fn test_session_tracks_pid() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    let req = shell_spawn_request("sleep 10", tmp.path());
+    let id = mgr.spawn(req).await.unwrap();
+
+    let info = mgr.get(id).await.expect("Session should exist");
+    assert!(info.pid > 0, "PID should be non-zero, got: {}", info.pid);
+
+    // Verify the PID belongs to a real process by checking /proc
+    let proc_path = PathBuf::from(format!("/proc/{}", info.pid));
+    assert!(
+        proc_path.exists(),
+        "Process with PID {} should exist in /proc",
+        info.pid
+    );
+
+    // Cleanup
+    mgr.kill(id).await.unwrap();
+}
+
+/// Test 6: kill() terminates a session; get() returns None (session removed)
+#[tokio::test]
+async fn test_kill_terminates_session() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    let req = shell_spawn_request("sleep 10", tmp.path());
+    let id = mgr.spawn(req).await.unwrap();
+
+    let info = mgr.get(id).await.expect("Session should exist before kill");
+    let pid = info.pid;
+
+    // Kill the session
+    mgr.kill(id).await.unwrap();
+
+    // Session should be removed from the registry
+    assert!(
+        mgr.get(id).await.is_none(),
+        "Session should not exist after kill"
+    );
+
+    // Process should no longer be running
+    // Give a moment for process cleanup
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    let proc_path = PathBuf::from(format!("/proc/{}", pid));
+    assert!(
+        !proc_path.exists(),
+        "Process {} should not exist after kill",
+        pid
+    );
 }
