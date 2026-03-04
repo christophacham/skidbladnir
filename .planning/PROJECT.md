@@ -90,12 +90,16 @@ These are implementation suggestions, not mandated decisions. They are proposed 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Separate daemon + frontend (not monolith) | Clean separation of concerns, frontend can iterate independently | — Pending |
-| Direct PTY over tmux | Eliminates runtime dependency, enables structured output parsing, richer process control | — Pending |
+| Direct PTY over tmux | Eliminates runtime dependency, enables structured output parsing, richer process control | ✓ Confirmed — pty-process 0.5 with native async I/O, Phase 2 |
 | Structured output over raw terminal | Better UX for web, enables action buttons and status parsing | — Pending |
 | oauth2-proxy over custom auth | Avoids custom session/token management, proven component, minutes to configure | — Pending |
 | Caddy over nginx | Native WebSocket support, automatic HTTPS, simpler config, forward_auth built-in | — Pending |
 | Web replaces TUI entirely | Single UI to maintain, web is strictly more capable (remote access, richer rendering) | — Pending |
 | Full history persisted to disk | Fidelity over convenience — lazy loading + virtualized scroll handles performance | — Pending |
+| pty-process over portable-pty | Native tokio AsyncRead/AsyncWrite, built-in setsid(), pre_exec support, returns tokio::process::Child | ✓ Confirmed — Phase 2 |
+| Base64 output encoding over raw octet-stream | Simpler for API consumers, JSON-native transport | ✓ Confirmed — Phase 2 |
+| procfs crate for /proc reading | Type-safe Rust API vs hand-parsing, provides Process/Stat/StatM structs | ✓ Confirmed — Phase 2 |
+| Delta CPU% over cumulative average | Instantaneous usage via tick deltas more useful for detecting runaway processes | ✓ Confirmed — Phase 2 |
 
 ---
-*Last updated: 2026-03-03 after initialization*
+*Last updated: 2026-03-04 after Phase 2*
