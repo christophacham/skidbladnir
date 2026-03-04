@@ -303,3 +303,72 @@ async fn test_kill_terminates_session() {
         pid
     );
 }
+
+/// Test: shutdown_all kills all sessions, no zombies remain
+#[tokio::test]
+async fn test_shutdown_all_kills_all_sessions() {
+    let tmp = tempfile::tempdir().unwrap();
+    let sessions_dir = tmp.path().join("sessions");
+    let mgr = SessionManager::new(sessions_dir);
+
+    // Spawn 3 sessions
+    let mut pids = Vec::new();
+    for _ in 0..3 {
+        let req = shell_spawn_request("sleep 30", tmp.path());
+        let id = mgr.spawn(req).await.unwrap();
+        let info = mgr.get(id).await.unwrap();
+        pids.push(info.pid);
+    }
+
+    // Verify all 3 are listed
+    assert_eq!(mgr.list().await.len(), 3, "Should have 3 sessions");
+
+    // Verify all PIDs are running
+    for &pid in &pids {
+        let proc_path = PathBuf::from(format!("/proc/{}", pid));
+        assert!(
+            proc_path.exists(),
+            "PID {} should be running before shutdown",
+            pid
+        );
+    }
+
+    // Shutdown all sessions
+    mgr.shutdown_all().await;
+
+    // Session list should be empty
+    assert!(
+        mgr.list().await.is_empty(),
+        "No sessions should remain after shutdown_all"
+    );
+
+    // Give a moment for process cleanup
+    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+    // Verify all processes are gone (no zombies)
+    for &pid in &pids {
+        let proc_path = PathBuf::from(format!("/proc/{}", pid));
+        assert!(
+            !proc_path.exists(),
+            "Process {} should not exist after shutdown_all",
+            pid
+        );
+
+        // Additionally verify no zombie via waitpid
+        use nix::sys::wait::{waitpid, WaitPidFlag};
+        use nix::unistd::Pid;
+        let wait_result = waitpid(Pid::from_raw(pid as i32), Some(WaitPidFlag::WNOHANG));
+        // Should be ECHILD (no such child) since we reaped it, or already cleaned up
+        match wait_result {
+            Err(nix::errno::Errno::ECHILD) => {} // Expected: already reaped
+            Ok(nix::sys::wait::WaitStatus::Exited(..)) => {} // Also ok: just reaped
+            Ok(nix::sys::wait::WaitStatus::Signaled(..)) => {} // Killed by signal
+            other => {
+                panic!(
+                    "Unexpected waitpid result for PID {}: {:?} -- possible zombie",
+                    pid, other
+                );
+            }
+        }
+    }
+}

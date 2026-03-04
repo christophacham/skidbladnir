@@ -230,6 +230,36 @@ impl SessionManager {
     }
 }
 
+/// Defense-in-depth: best-effort synchronous cleanup when SessionManager is dropped.
+///
+/// The primary cleanup path is `shutdown_all()` called explicitly during daemon shutdown.
+/// This Drop impl is a last-resort safety net for unexpected drops (e.g., panic unwind).
+/// It cannot be async, so it sends SIGTERM via `kill(2)` directly.
+impl Drop for SessionManager {
+    fn drop(&mut self) {
+        // try_read() is non-blocking and won't panic
+        if let Ok(sessions) = self.sessions.try_read() {
+            if !sessions.is_empty() {
+                tracing::warn!(
+                    count = sessions.len(),
+                    "SessionManager dropped with active sessions -- sending SIGTERM as safety net"
+                );
+                for (id, handle) in sessions.iter() {
+                    let pid = handle.pid;
+                    if pid > 0 {
+                        // Best-effort kill -- ignore errors (process may already be dead)
+                        let _ = nix::sys::signal::kill(
+                            nix::unistd::Pid::from_raw(pid as i32),
+                            nix::sys::signal::Signal::SIGTERM,
+                        );
+                        tracing::info!(session_id = %id, pid = pid, "Sent SIGTERM in Drop safety net");
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Background task that reads from the PTY and writes to the session output.
 async fn reader_task(
     mut read_pty: OwnedReadPty,
