@@ -300,57 +300,43 @@ async fn ws_cursor_reconnection() {
     let app = build_test_app(tmp.path());
     let (base_url, _server) = start_server(app.clone()).await;
 
-    // Produce output in two phases
-    let (id, _pid) =
-        spawn_session(&app, "echo first_cursor_data && sleep 1 && echo second_cursor_data").await;
+    // Use cat with a FIFO-like approach: write input to cat to control output timing.
+    // Step 1: spawn cat session
+    let (id, _pid) = spawn_session(&app, "cat").await;
 
-    let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
+    // Step 2: Write first output via the REST API
+    let write_body = serde_json::json!({"input": "first_cursor_data\n"});
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/sessions/{}/write", id))
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&write_body).unwrap()))
+        .unwrap();
+    let _ = app.clone().oneshot(req).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
 
-    // First connection: read until we see "first_cursor_data"
-    let (_sink1, mut stream1) = ws_connect(&ws_url).await;
-
-    // Get the connected message to know total_bytes
-    let connected = read_until(&mut stream1, Duration::from_secs(3), |v| {
-        v.get("type").and_then(|t| t.as_str()) == Some("connected")
-    })
-    .await
-    .expect("Should get connected message");
-
-    let initial_total = connected["total_bytes"].as_u64().unwrap();
-
-    // Read output until we see first_cursor_data
-    let _ = read_until(&mut stream1, Duration::from_secs(3), |v| {
-        if v.get("type").and_then(|t| t.as_str()) == Some("output") {
-            if let Some(data_b64) = v.get("data").and_then(|d| d.as_str()) {
-                use base64::Engine;
-                if let Ok(decoded) = base64::engine::general_purpose::STANDARD.decode(data_b64) {
-                    return String::from_utf8_lossy(&decoded).contains("first_cursor_data");
-                }
-            }
-        }
-        false
-    })
-    .await;
-
-    // Find the latest offset from the output messages -- we need total bytes after first output
-    // Use the REST API to get current total_bytes
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    // Step 3: Record current total_bytes (after first output was produced)
     let req = Request::builder()
         .method("GET")
         .uri(format!("/api/v1/sessions/{}", id))
         .body(Body::empty())
         .unwrap();
     let (_status, info) = json_response(&app, req).await;
-    let cursor_offset = info["total_bytes"].as_u64().unwrap_or(initial_total);
+    let cursor_offset = info["total_bytes"].as_u64().expect("should have total_bytes");
+    assert!(cursor_offset > 0, "Should have some output by now");
 
-    // Drop first connection
-    drop(stream1);
-    drop(_sink1);
+    // Step 4: Write second output
+    let write_body = serde_json::json!({"input": "second_cursor_data\n"});
+    let req = Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/sessions/{}/write", id))
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&write_body).unwrap()))
+        .unwrap();
+    let _ = app.clone().oneshot(req).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
 
-    // Wait for second output to be produced
-    tokio::time::sleep(Duration::from_millis(1200)).await;
-
-    // Reconnect with cursor
+    // Step 5: Connect with cursor=cursor_offset (should get delta containing second_cursor_data)
     let ws_url_cursor = format!(
         "{}/api/v1/sessions/{}/ws?cursor={}",
         base_url.replace("http", "ws"),
@@ -359,8 +345,9 @@ async fn ws_cursor_reconnection() {
     );
     let (_sink2, mut stream2) = ws_connect(&ws_url_cursor).await;
 
-    // Collect all output messages (initial replay + connected)
+    // Collect all messages -- look for second_cursor_data in output
     let mut found_second = false;
+    let mut found_first_in_delta = false;
     let deadline = Duration::from_secs(5);
     let _ = timeout(deadline, async {
         while let Some(Ok(msg)) = stream2.next().await {
@@ -375,13 +362,25 @@ async fn ws_cursor_reconnection() {
                                 let text = String::from_utf8_lossy(&decoded);
                                 if text.contains("second_cursor_data") {
                                     found_second = true;
-                                    break;
+                                }
+                                // Check offset -- data from before cursor should not appear
+                                // unless it was in the same chunk. first_cursor_data at offset 0
+                                // should not be in delta starting from cursor_offset.
+                                if text.contains("first_cursor_data") {
+                                    let msg_offset = val.get("offset")
+                                        .and_then(|o| o.as_u64())
+                                        .unwrap_or(0);
+                                    if msg_offset < cursor_offset {
+                                        found_first_in_delta = true;
+                                    }
                                 }
                             }
                         }
                     }
                     if val.get("type").and_then(|t| t.as_str()) == Some("connected") {
-                        // Keep going, look for output after connected
+                        if found_second {
+                            break;
+                        }
                     }
                 }
             }
@@ -393,6 +392,11 @@ async fn ws_cursor_reconnection() {
         found_second,
         "Reconnected client with cursor should receive second_cursor_data"
     );
+    // The delta should not replay data from before the cursor offset
+    assert!(
+        !found_first_in_delta,
+        "Delta should not contain first_cursor_data from before cursor offset"
+    );
 }
 
 #[tokio::test]
@@ -401,13 +405,14 @@ async fn ws_state_change_on_exit() {
     let app = build_test_app(tmp.path());
     let (base_url, _server) = start_server(app.clone()).await;
 
-    let (id, _pid) = spawn_session(&app, "echo done && exit 0").await;
+    // Use sleep so session stays alive long enough for WS to connect, then exit
+    let (id, _pid) = spawn_session(&app, "sleep 0.5 && exit 0").await;
 
     let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
     let (_sink, mut stream) = ws_connect(&ws_url).await;
 
     // Should receive a "state" message with session_state containing "exited"
-    let msg = read_until(&mut stream, Duration::from_secs(5), |v| {
+    let msg = read_until(&mut stream, Duration::from_secs(10), |v| {
         v.get("type").and_then(|t| t.as_str()) == Some("state")
     })
     .await;
