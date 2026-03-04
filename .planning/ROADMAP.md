@@ -84,7 +84,7 @@ Plans:
   3. User can create and delete tasks with confirmation for destructive actions
   4. User can search and filter tasks by title and description content
   5. User can switch between projects via a sidebar and invoke actions via command palette (Ctrl+K)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 04-01-PLAN.md — SvelteKit scaffold, types, API client, stores, Board/Column/TaskCard/NavBar components
@@ -196,7 +196,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 | 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
 | 2. PTY Process Management | 3/3 | Complete   | 2026-03-04 |
 | 3. WebSocket Streaming | 2/2 | Complete   | 2026-03-04 |
-| 4. Frontend Kanban Board | 0/3 | Not started | - |
+| 4. Frontend Kanban Board | 1/3 | In Progress|  |
 | 5. Task Detail & Live Output | 0/2 | Not started | - |
 | 6. Workflow Engine | 0/3 | Not started | - |
 | 7. Structured Output & Session Intelligence | 0/2 | Not started | - |

@@ -39,8 +39,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Kanban Board
 
-- [ ] **BOARD-01**: User sees 5-column kanban layout (Backlog/Planning/Running/Review/Done)
-- [ ] **BOARD-02**: Task cards display title, agent badge, and phase status indicator
+- [x] **BOARD-01**: User sees 5-column kanban layout (Backlog/Planning/Running/Review/Done)
+- [x] **BOARD-02**: Task cards display title, agent badge, and phase status indicator
 - [ ] **BOARD-03**: User can create tasks with title and description
 - [ ] **BOARD-04**: User can delete tasks with confirmation dialog
 - [ ] **BOARD-05**: User can search/filter tasks across title and description
@@ -156,8 +156,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WS-06 | Phase 7: Structured Output & Session Intelligence | Pending |
 | WS-07 | Phase 7: Structured Output & Session Intelligence | Pending |
 | WS-08 | Phase 7: Structured Output & Session Intelligence | Pending |
-| BOARD-01 | Phase 4: Frontend Kanban Board | Pending |
-| BOARD-02 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-01 | Phase 4: Frontend Kanban Board | Complete |
+| BOARD-02 | Phase 4: Frontend Kanban Board | Complete |
 | BOARD-03 | Phase 4: Frontend Kanban Board | Pending |
 | BOARD-04 | Phase 4: Frontend Kanban Board | Pending |
 | BOARD-05 | Phase 4: Frontend Kanban Board | Pending |

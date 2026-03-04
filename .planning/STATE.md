@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 plans verified
-last_updated: "2026-03-04T11:07:53.342Z"
-last_activity: 2026-03-04 -- Completed Plan 03-02 (WebSocket handler with bidirectional streaming)
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-04T11:14:18.000Z"
+last_activity: 2026-03-04 -- Completed Plan 04-01 (SvelteKit kanban board scaffold)
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 10
-  completed_plans: 7
-  percent: 30
+  completed_plans: 8
+  percent: 35
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Manage multiple coding agent sessions from any browser with full reconnectable history, without losing any of the workflow semantics that make AGTX useful.
-**Current focus:** Phase 3 - WebSocket Streaming
+**Current focus:** Phase 4 - Frontend Kanban Board
 
 ## Current Position
 
-Phase: 3 of 10 (WebSocket Streaming)
-Plan: 2 of 3 in current phase
+Phase: 4 of 10 (Frontend Kanban Board)
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 03-02 (WebSocket handler with bidirectional streaming)
+Last activity: 2026-03-04 -- Completed Plan 04-01 (SvelteKit kanban board scaffold)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 35%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 8min
-- Total execution time: 0.78 hours
+- Total plans completed: 8
+- Average duration: 7min
+- Total execution time: 0.87 hours
 
 **By Phase:**
 
@@ -46,9 +46,10 @@ Progress: [███░░░░░░░] 30%
 | 01-daemon-foundation | 2 | 14min | 7min |
 | 02-pty-process-management | 3 | 28min | 9min |
 | 03-websocket-streaming | 2 | 12min | 6min |
+| 04-frontend-kanban-board | 1 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 12min, 8min, 8min, 5min, 7min
+- Last 5 plans: 8min, 8min, 5min, 7min, 5min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -90,6 +91,11 @@ Recent decisions affecting current work:
 - 03-02: mpsc channel bridge pattern for WS send task (avoids futures-util as main dep)
 - 03-02: tokio::select! loop multiplexes inbound/outbound on single WebSocket
 - 03-02: WebSocket route at top level in api_router (before session nest) for extractor compatibility
+- 04-01: vite-plugin-svelte v5 for vite 6 compatibility (v4 requires vite 5, v7 requires vite 8)
+- 04-01: Standalone tsconfig.json with $lib paths instead of extending .svelte-kit/tsconfig.json for vitest
+- 04-01: Svelte 5 class-based stores with $state/$derived runes as singleton exports
+- 04-01: CSS custom properties matching TUI ThemeConfig for dark theme consistency
+- 04-01: Manual SvelteKit scaffold to avoid sv create interactive CLI blocking
 
 ### Pending Todos
 
@@ -103,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T11:07:53.329Z
-Stopped at: Phase 4 plans verified
-Resume file: .planning/phases/04-frontend-kanban-board/04-01-PLAN.md
+Last session: 2026-03-04T11:14:18.000Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: .planning/phases/04-frontend-kanban-board/04-02-PLAN.md
