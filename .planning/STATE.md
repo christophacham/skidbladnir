@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-04T14:12:36.667Z"
-last_activity: 2026-03-04 -- Completed Plan 04-02 (Task CRUD modals and search)
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-04T14:35:15Z"
+last_activity: 2026-03-04 -- Completed Plan 05-01 (WebSocket data layer)
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
-  percent: 35
+  total_plans: 12
+  completed_plans: 11
+  percent: 40
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Manage multiple coding agent sessions from any browser with full reconnectable history, without losing any of the workflow semantics that make AGTX useful.
-**Current focus:** Phase 4 - Frontend Kanban Board
+**Current focus:** Phase 5 - Task Detail & Live Output
 
 ## Current Position
 
-Phase: 4 of 10 (Frontend Kanban Board)
-Plan: 2 of 3 in current phase
+Phase: 5 of 10 (Task Detail & Live Output)
+Plan: 1 of 2 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 04-02 (Task CRUD modals and search)
+Last activity: 2026-03-04 -- Completed Plan 05-01 (WebSocket data layer)
 
-Progress: [████░░░░░░] 35%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████░░░░░░] 35%
 *Updated after each plan completion*
 | Phase 04 P02 | 4min | 2 tasks | 5 files |
 | Phase 04 P03 | 3min | 2 tasks | 6 files |
+| Phase 05 P01 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Cross-store derivation: taskStore imports projectStore for project-filtered byStatus
 - [Phase 04]: Command registry pattern with rebuildProjectCommands() for dynamic project switch entries
 - [Phase 04]: Fuse.js threshold 0.4 for balanced fuzzy matching in command palette
+- 05-01: Removed word boundaries from error regex to match compound words like RuntimeException
+- 05-01: Exported UiStore class (not just singleton) for fresh-instance testing
+- 05-01: classifyBlock exported as standalone pure function for unit testing without Svelte runtime
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T14:12:36.664Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-task-detail-live-output/05-CONTEXT.md
+Last session: 2026-03-04T14:35:15Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: .planning/phases/05-task-detail-live-output/05-01-SUMMARY.md

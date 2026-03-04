@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Daemon Foundation** - Axum server with REST API skeleton, structured logging, health checks, and lifecycle management (completed 2026-03-04)
 - [x] **Phase 2: PTY Process Management** - Agent process spawning and control via pty-process with async I/O, session lifecycle, and /proc resource monitoring (completed 2026-03-04)
 - [x] **Phase 3: WebSocket Streaming** - Bidirectional real-time agent output streaming with session persistence and reconnection (completed 2026-03-04)
-- [ ] **Phase 4: Frontend Kanban Board** - SvelteKit SPA with 5-column kanban layout, task CRUD, and project navigation
+- [x] **Phase 4: Frontend Kanban Board** - SvelteKit SPA with 5-column kanban layout, task CRUD, and project navigation (completed 2026-03-04)
 - [ ] **Phase 5: Task Detail & Live Output** - Split-view detail panel with live agent output streaming and phase status
 - [ ] **Phase 6: Workflow Engine** - Phase transitions, plugin resolution, skill deployment, artifact detection, and PR workflow
 - [ ] **Phase 7: Structured Output & Session Intelligence** - Semantic output parsing, action buttons, timeline, search, and reconnect summaries
@@ -84,12 +84,12 @@ Plans:
   3. User can create and delete tasks with confirmation for destructive actions
   4. User can search and filter tasks by title and description content
   5. User can switch between projects via a sidebar and invoke actions via command palette (Ctrl+K)
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 04-01-PLAN.md — SvelteKit scaffold, types, API client, stores, Board/Column/TaskCard/NavBar components
-- [ ] 04-02-PLAN.md — Task CRUD modals (create + delete confirm) and search/filter with card dimming
-- [ ] 04-03-PLAN.md — Project sidebar with task counts and command palette with fuzzy action search
+- [x] 04-01-PLAN.md — SvelteKit scaffold, types, API client, stores, Board/Column/TaskCard/NavBar components
+- [x] 04-02-PLAN.md — Task CRUD modals (create + delete confirm) and search/filter with card dimming
+- [x] 04-03-PLAN.md — Project sidebar with task counts and command palette with fuzzy action search
 
 ### Phase 5: Task Detail & Live Output
 **Goal**: Clicking a task opens a split-view panel showing live agent output with visual distinction between output types and phase status
@@ -100,10 +100,10 @@ Plans:
   2. Detail panel streams live agent output in real time matching the WebSocket feed
   3. Agent text, tool calls, and errors are visually distinct (different styling or color coding)
   4. Task cards and detail panel both show current phase status (Working, Idle, Ready, Exited)
-**Plans:** 2 plans
+**Plans:** 1/2 plans complete
 
 Plans:
-- [ ] 05-01-PLAN.md — WebSocket message types, WebSocketStore with output classification and phase status, UiStore extension, session REST helper, Vite WS proxy
+- [x] 05-01-PLAN.md — WebSocket message types, WebSocketStore with output classification and phase status, UiStore extension, session REST helper, Vite WS proxy
 - [ ] 05-02-PLAN.md — DetailPanel, OutputView, InputBar, StatusDot components; Board split-view layout; TaskCard live status; NavBar connection indicator
 
 ### Phase 6: Workflow Engine
@@ -196,8 +196,8 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 | 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
 | 2. PTY Process Management | 3/3 | Complete   | 2026-03-04 |
 | 3. WebSocket Streaming | 2/2 | Complete   | 2026-03-04 |
-| 4. Frontend Kanban Board | 1/3 | In Progress|  |
-| 5. Task Detail & Live Output | 0/2 | Not started | - |
+| 4. Frontend Kanban Board | 3/3 | Complete   | 2026-03-04 |
+| 5. Task Detail & Live Output | 1/2 | In Progress |  |
 | 6. Workflow Engine | 0/3 | Not started | - |
 | 7. Structured Output & Session Intelligence | 0/2 | Not started | - |
 | 8. System Monitoring | 0/1 | Not started | - |
