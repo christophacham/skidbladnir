@@ -49,10 +49,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Task Detail & Agent Output
 
-- [ ] **OUTPUT-01**: Clicking a task opens split-view detail panel (board left, detail right)
-- [ ] **OUTPUT-02**: Detail panel streams live agent output in real time
-- [ ] **OUTPUT-03**: Agent text, tool calls, and errors are visually distinct
-- [ ] **OUTPUT-04**: Task cards and detail panel show phase status (Working/Idle/Ready/Exited)
+- [x] **OUTPUT-01**: Clicking a task opens split-view detail panel (board left, detail right)
+- [x] **OUTPUT-02**: Detail panel streams live agent output in real time
+- [x] **OUTPUT-03**: Agent text, tool calls, and errors are visually distinct
+- [x] **OUTPUT-04**: Task cards and detail panel show phase status (Working/Idle/Ready/Exited)
 - [ ] **OUTPUT-05**: Agent output is parsed into collapsible semantic sections (thinking, tool use, file edits)
 - [ ] **OUTPUT-06**: Detected agent prompts render action buttons (approve/reject) with free text fallback
 - [ ] **OUTPUT-07**: Phase progress timeline shows transitions with timestamps and durations
@@ -163,10 +163,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BOARD-05 | Phase 4: Frontend Kanban Board | Complete |
 | BOARD-06 | Phase 4: Frontend Kanban Board | Complete |
 | BOARD-07 | Phase 4: Frontend Kanban Board | Complete |
-| OUTPUT-01 | Phase 5: Task Detail & Live Output | Pending |
-| OUTPUT-02 | Phase 5: Task Detail & Live Output | Pending |
-| OUTPUT-03 | Phase 5: Task Detail & Live Output | Pending |
-| OUTPUT-04 | Phase 5: Task Detail & Live Output | Pending |
+| OUTPUT-01 | Phase 5: Task Detail & Live Output | Complete |
+| OUTPUT-02 | Phase 5: Task Detail & Live Output | Complete |
+| OUTPUT-03 | Phase 5: Task Detail & Live Output | Complete |
+| OUTPUT-04 | Phase 5: Task Detail & Live Output | Complete |
 | OUTPUT-05 | Phase 7: Structured Output & Session Intelligence | Pending |
 | OUTPUT-06 | Phase 7: Structured Output & Session Intelligence | Pending |
 | OUTPUT-07 | Phase 7: Structured Output & Session Intelligence | Pending |
