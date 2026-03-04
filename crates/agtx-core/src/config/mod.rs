@@ -2,6 +2,42 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+/// Daemon configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonConfig {
+    /// Port the daemon listens on
+    #[serde(default = "default_port")]
+    pub port: u16,
+    /// Bind address for the daemon
+    #[serde(default = "default_bind")]
+    pub bind: String,
+    /// Log level (trace, debug, info, warn, error)
+    #[serde(default = "default_log_level")]
+    pub log_level: String,
+}
+
+impl Default for DaemonConfig {
+    fn default() -> Self {
+        Self {
+            port: default_port(),
+            bind: default_bind(),
+            log_level: default_log_level(),
+        }
+    }
+}
+
+fn default_port() -> u16 {
+    3742
+}
+
+fn default_bind() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn default_log_level() -> String {
+    "info".to_string()
+}
+
 /// Global configuration (stored in ~/.config/agtx/)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalConfig {
@@ -20,6 +56,10 @@ pub struct GlobalConfig {
     /// UI theme/colors
     #[serde(default)]
     pub theme: ThemeConfig,
+
+    /// Daemon settings
+    #[serde(default)]
+    pub daemon: DaemonConfig,
 }
 
 impl Default for GlobalConfig {
@@ -29,6 +69,7 @@ impl Default for GlobalConfig {
             agents: PhaseAgentsConfig::default(),
             worktree: WorktreeConfig::default(),
             theme: ThemeConfig::default(),
+            daemon: DaemonConfig::default(),
         }
     }
 }
