@@ -2,11 +2,13 @@
 	import { taskStore } from '$lib/stores/tasks.svelte';
 	import { projectStore } from '$lib/stores/projects.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import PluginSelect from './PluginSelect.svelte';
 
 	const AGENTS = ['claude', 'codex', 'gemini', 'copilot', 'opencode'];
 
 	let title = $state('');
 	let agent = $state(projectStore.active?.default_agent ?? 'claude');
+	let plugin = $state('');
 	let description = $state('');
 	let error = $state<string | null>(null);
 	let submitting = $state(false);
@@ -18,6 +20,7 @@
 		if (uiStore.createModalOpen) {
 			title = '';
 			agent = projectStore.active?.default_agent ?? 'claude';
+			plugin = '';
 			description = '';
 			error = null;
 			submitting = false;
@@ -39,7 +42,8 @@
 				title: title.trim(),
 				agent,
 				project_id: projectStore.active?.id ?? '',
-				description: description.trim() || undefined
+				description: description.trim() || undefined,
+				plugin: plugin || undefined
 			});
 			close();
 		} catch (e) {
@@ -154,6 +158,11 @@
 							<option value={a}>{a}</option>
 						{/each}
 					</select>
+				</div>
+
+				<!-- Plugin -->
+				<div>
+					<PluginSelect bind:value={plugin} />
 				</div>
 
 				<!-- Description -->

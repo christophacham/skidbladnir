@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Task } from '$lib/types';
+	import { taskStore } from '$lib/stores/tasks.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
 	import { wsStore } from '$lib/stores/websocket.svelte';
 	import StatusDot from './StatusDot.svelte';
@@ -32,9 +33,18 @@
 
 	const isSelected = $derived(uiStore.selectedTask?.id === task.id);
 
+	let settingUp = $state(false);
+
 	function handleDelete(e: MouseEvent) {
 		e.stopPropagation();
 		uiStore.openDeleteConfirm(task);
+	}
+
+	async function handleAdvance(e: MouseEvent) {
+		e.stopPropagation();
+		settingUp = true;
+		await taskStore.advance(task.id);
+		settingUp = false;
 	}
 </script>
 
@@ -50,7 +60,20 @@
 	}}
 	onclick={() => onclick?.(task)}
 >
-	<!-- Delete button (visible on hover) -->
+	<!-- Action buttons (visible on hover) -->
+	{#if task.status !== 'Done'}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<span
+			class="absolute top-1.5 right-8 w-5 h-5 flex items-center justify-center rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-blue-600/30"
+			style="color: var(--color-dimmed);"
+			onclick={handleAdvance}
+			role="button"
+			tabindex="-1"
+			title="Advance task"
+		>
+			&#x25B6;
+		</span>
+	{/if}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<span
 		class="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-red-600/30"
@@ -82,4 +105,16 @@
 			{task.agent}
 		</span>
 	</div>
+
+	<!-- Setting up overlay -->
+	{#if settingUp}
+		<div
+			class="absolute inset-0 rounded-lg flex items-center justify-center"
+			style="background-color: rgba(0, 0, 0, 0.6);"
+		>
+			<span class="text-xs animate-pulse" style="color: var(--color-accent);"
+				>Setting up...</span
+			>
+		</div>
+	{/if}
 </button>
