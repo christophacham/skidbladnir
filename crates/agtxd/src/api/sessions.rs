@@ -1,14 +1,16 @@
 use std::path::PathBuf;
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use base64::Engine;
+
 use crate::error::AppError;
-use crate::session::{MetricsSnapshot, SessionInfo, SpawnRequest};
+use crate::session::{MetricsSnapshot, SessionInfo, SessionOutput, SpawnRequest};
 use crate::state::AppState;
 
 /// Request body for creating a new session.
@@ -54,6 +56,21 @@ pub struct OutputResponse {
     pub total_bytes: u64,
 }
 
+/// Query parameters for the output endpoint.
+#[derive(Debug, Deserialize)]
+pub struct OutputQuery {
+    /// Byte offset to start reading from (default: None = ring buffer mode).
+    #[serde(default)]
+    pub offset: Option<u64>,
+    /// Maximum bytes to return (default: 65536).
+    #[serde(default = "default_output_limit")]
+    pub limit: Option<u64>,
+}
+
+fn default_output_limit() -> Option<u64> {
+    Some(65_536)
+}
+
 /// Build the session API router.
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -70,37 +87,6 @@ pub fn router() -> Router<AppState> {
 /// Parse a UUID from a path parameter, returning 400 on invalid UUID.
 fn parse_uuid(id: &str) -> Result<Uuid, AppError> {
     Uuid::parse_str(id).map_err(|_| AppError::BadRequest(format!("Invalid UUID: {}", id)))
-}
-
-/// Simple base64 encoding (standard alphabet with padding).
-fn base64_encode(data: &[u8]) -> String {
-    #[rustfmt::skip]
-    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
-
-    for chunk in data.chunks(3) {
-        let b0 = chunk[0] as u32;
-        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
-
-        let combined = (b0 << 16) | (b1 << 8) | b2;
-
-        result.push(TABLE[((combined >> 18) & 0x3F) as usize] as char);
-        result.push(TABLE[((combined >> 12) & 0x3F) as usize] as char);
-
-        if chunk.len() > 1 {
-            result.push(TABLE[((combined >> 6) & 0x3F) as usize] as char);
-        } else {
-            result.push('=');
-        }
-
-        if chunk.len() > 2 {
-            result.push(TABLE[(combined & 0x3F) as usize] as char);
-        } else {
-            result.push('=');
-        }
-    }
-    result
 }
 
 /// POST /api/v1/sessions - Spawn a new session
@@ -241,17 +227,19 @@ async fn kill_session_process(
 }
 
 /// GET /api/v1/sessions/{id}/output - Get session output (base64 encoded)
+///
+/// Supports optional query parameters:
+/// - `offset`: byte offset to start reading from (>0 reads from log file)
+/// - `limit`: maximum bytes to return (default: 65536)
+///
+/// When offset is None or 0, returns the ring buffer tail (default behavior).
+/// When offset > 0, reads from the append-only log file at that position.
 async fn get_session_output(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    Query(query): Query<OutputQuery>,
 ) -> Result<Json<OutputResponse>, AppError> {
     let uuid = parse_uuid(&id)?;
-
-    let output = state
-        .session_manager
-        .get_output(uuid)
-        .await
-        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
 
     let info = state
         .session_manager
@@ -259,7 +247,31 @@ async fn get_session_output(
         .await
         .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
 
-    let encoded = base64_encode(&output);
+    let limit = query.limit.unwrap_or(65_536) as usize;
+
+    let output = match query.offset {
+        Some(offset) if offset > 0 => {
+            // Read from append-only log file at the given offset
+            let path = state
+                .session_manager
+                .get_output_path(uuid)
+                .await
+                .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+            SessionOutput::read_range(&path, offset, limit)
+                .await
+                .map_err(AppError::Internal)?
+        }
+        _ => {
+            // Default: return ring buffer tail
+            state
+                .session_manager
+                .get_output(uuid)
+                .await
+                .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?
+        }
+    };
+
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&output);
 
     Ok(Json(OutputResponse {
         data: encoded,

@@ -2,6 +2,7 @@ pub mod health;
 pub mod projects;
 pub mod sessions;
 pub mod tasks;
+pub mod ws;
 
 use axum::routing::get;
 use axum::Router;
