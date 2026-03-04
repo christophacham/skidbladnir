@@ -1,4 +1,5 @@
 import { projectStore } from '$lib/stores/projects.svelte';
+import { taskStore } from '$lib/stores/tasks.svelte';
 import { uiStore } from '$lib/stores/ui.svelte';
 import { COLUMNS } from '$lib/types';
 
@@ -72,6 +73,29 @@ class CommandStore {
 					}
 				},
 				keywords: ['maximize', 'show']
+			},
+			// Workflow
+			{
+				id: 'advance-task',
+				label: 'Advance Task',
+				shortcut: 'm',
+				category: 'Workflow',
+				action: () => {
+					const task = uiStore.selectedTask;
+					if (task && task.status !== 'Done') {
+						taskStore.advance(task.id);
+					}
+				},
+				keywords: ['move', 'forward', 'next', 'workflow']
+			},
+			{
+				id: 'create-pr',
+				label: 'Create PR for Task',
+				category: 'Workflow',
+				action: () => {
+					console.log('PR modal not yet implemented');
+				},
+				keywords: ['pull request', 'pr', 'review']
 			}
 		];
 	}

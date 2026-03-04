@@ -54,6 +54,36 @@ export interface CreateTaskRequest {
 	agent: string;
 	project_id: string;
 	description?: string;
+	plugin?: string;
+}
+
+export interface PluginInfo {
+	name: string;
+	description: string;
+	source: string; // "bundled" | "global" | "project"
+}
+
+export interface AdvanceResult {
+	task: Task;
+	warning?: string;
+}
+
+export interface DiffResponse {
+	diff: string;
+}
+
+export interface PrResponse {
+	pr_number: number;
+	pr_url: string;
+}
+
+export interface PrGenerateResponse {
+	title: string;
+	body: string;
+}
+
+export interface PrStatusResponse {
+	state: string; // "open" | "merged" | "closed" | "unknown"
 }
 
 export interface UpdateTaskRequest {

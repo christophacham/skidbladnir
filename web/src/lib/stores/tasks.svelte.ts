@@ -1,6 +1,7 @@
-import type { Task, TaskStatus, CreateTaskRequest } from '$lib/types';
+import type { Task, TaskStatus, CreateTaskRequest, AdvanceResult } from '$lib/types';
 import { COLUMNS } from '$lib/types';
 import { fetchTasks, createTask as apiCreateTask, deleteTask as apiDeleteTask } from '$lib/api/tasks';
+import { advanceTask } from '$lib/api/workflow';
 import { projectStore } from '$lib/stores/projects.svelte';
 
 class TaskStore {
@@ -78,6 +79,27 @@ class TaskStore {
 			this.list = this.list.filter((t) => t.id !== id);
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : 'Failed to delete task';
+		}
+	}
+
+	async advance(taskId: string, direction: string = 'next'): Promise<AdvanceResult | undefined> {
+		try {
+			const result = await advanceTask(taskId, direction);
+			const idx = this.list.findIndex((t) => t.id === taskId);
+			if (idx !== -1) {
+				this.list[idx] = result.task;
+			}
+			return result;
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : 'Failed to advance task';
+			return undefined;
+		}
+	}
+
+	updateTask(updated: Task): void {
+		const idx = this.list.findIndex((t) => t.id === updated.id);
+		if (idx !== -1) {
+			this.list[idx] = updated;
 		}
 	}
 }
