@@ -13,7 +13,7 @@ Transform AGTX from a terminal TUI into a web-native dashboard backed by a persi
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Daemon Foundation** - Axum server with REST API skeleton, structured logging, health checks, and lifecycle management (completed 2026-03-04)
-- [ ] **Phase 2: PTY Process Management** - Agent process spawning and control via pty-process with async I/O, session lifecycle, and /proc resource monitoring
+- [x] **Phase 2: PTY Process Management** - Agent process spawning and control via pty-process with async I/O, session lifecycle, and /proc resource monitoring (completed 2026-03-04)
 - [ ] **Phase 3: WebSocket Streaming** - Bidirectional real-time agent output streaming with session persistence and reconnection
 - [ ] **Phase 4: Frontend Kanban Board** - SvelteKit SPA with 5-column kanban layout, task CRUD, and project navigation
 - [ ] **Phase 5: Task Detail & Live Output** - Split-view detail panel with live agent output streaming and phase status
@@ -51,12 +51,12 @@ Plans:
   3. PTY resizes when the client sends new dimensions and the agent's output reflows
   4. All agent processes are cleaned up on daemon exit with no zombie processes remaining
   5. Daemon reports PID and resource usage (CPU/memory) for each managed agent process
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 02-01-PLAN.md — Session module core: types, output persistence (ring buffer + file), SessionManager with spawn/read/write/resize/PID tracking
-- [ ] 02-02-PLAN.md — REST API endpoints for sessions + process cleanup on daemon shutdown (PTY-05)
-- [ ] 02-03-PLAN.md — Per-agent resource monitoring via /proc + metrics REST endpoint (PTY-07)
+- [x] 02-01-PLAN.md — Session module core: types, output persistence (ring buffer + file), SessionManager with spawn/read/write/resize/PID tracking
+- [x] 02-02-PLAN.md — REST API endpoints for sessions + process cleanup on daemon shutdown (PTY-05)
+- [x] 02-03-PLAN.md — Per-agent resource monitoring via /proc + metrics REST endpoint (PTY-07)
 
 ### Phase 3: WebSocket Streaming
 **Goal**: Browser clients receive live agent output via WebSocket, can send input back, and reconnect to full persisted history
@@ -193,7 +193,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
-| 2. PTY Process Management | 1/3 | In progress | - |
+| 2. PTY Process Management | 3/3 | Complete   | 2026-03-04 |
 | 3. WebSocket Streaming | 0/2 | Not started | - |
 | 4. Frontend Kanban Board | 0/2 | Not started | - |
 | 5. Task Detail & Live Output | 0/2 | Not started | - |

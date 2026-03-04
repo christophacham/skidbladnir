@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PTY-04**: Daemon resizes PTY on browser viewport change
 - [x] **PTY-05**: Daemon cleans up agent processes on exit with PR_SET_PDEATHSIG to prevent zombies
 - [x] **PTY-06**: Daemon tracks PIDs for all managed agent processes
-- [ ] **PTY-07**: Daemon reports per-agent resource usage (CPU/memory per PID via /proc)
+- [x] **PTY-07**: Daemon reports per-agent resource usage (CPU/memory per PID via /proc)
 
 ### WebSocket & Sessions
 
@@ -147,7 +147,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PTY-04 | Phase 2: PTY Process Management | Complete |
 | PTY-05 | Phase 2: PTY Process Management | Complete |
 | PTY-06 | Phase 2: PTY Process Management | Complete |
-| PTY-07 | Phase 2: PTY Process Management | Pending |
+| PTY-07 | Phase 2: PTY Process Management | Complete |
 | WS-01 | Phase 3: WebSocket Streaming | Pending |
 | WS-02 | Phase 3: WebSocket Streaming | Pending |
 | WS-03 | Phase 3: WebSocket Streaming | Pending |

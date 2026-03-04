@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-04T09:42:11Z"
-last_activity: 2026-03-04 -- Completed Plan 02-02 (REST API endpoints and shutdown integration)
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-04T09:53:31Z"
+last_activity: 2026-03-04 -- Completed Plan 02-03 (Resource monitoring and metrics)
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 3
-  completed_plans: 4
-  percent: 17
+  completed_plans: 5
+  percent: 22
 ---
 
 # Project State
@@ -21,33 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Manage multiple coding agent sessions from any browser with full reconnectable history, without losing any of the workflow semantics that make AGTX useful.
-**Current focus:** Phase 2 - PTY Process Management
+**Current focus:** Phase 2 - PTY Process Management -- COMPLETE
 
 ## Current Position
 
-Phase: 2 of 10 (PTY Process Management) -- IN PROGRESS
-Plan: 2 of 3 in current phase
+Phase: 2 of 10 (PTY Process Management) -- COMPLETE
+Plan: 3 of 3 in current phase (all done)
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 02-02 (REST API endpoints and shutdown integration)
+Last activity: 2026-03-04 -- Completed Plan 02-03 (Resource monitoring and metrics)
 
-Progress: [█▓░░░░░░░░] 17%
+Progress: [██░░░░░░░░] 22%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 9min
-- Total execution time: 0.57 hours
+- Total execution time: 0.70 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-daemon-foundation | 2 | 14min | 7min |
-| 02-pty-process-management | 2 | 20min | 10min |
+| 02-pty-process-management | 3 | 28min | 9min |
 
 **Recent Trend:**
-- Last 5 plans: 8min, 6min, 12min, 8min
+- Last 5 plans: 8min, 6min, 12min, 8min, 8min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -77,6 +77,10 @@ Recent decisions affecting current work:
 - 02-02: Output endpoint returns base64-encoded JSON for API consumer convenience
 - 02-02: Interrupt/kill endpoints use nix signal directly on PID (no SessionManager method needed)
 - 02-02: Drop impl uses try_read() for non-blocking best-effort session cleanup
+- 02-03: procfs 0.17 for type-safe /proc reading (CPU ticks, RSS pages)
+- 02-03: Delta CPU% calculation (prev_ticks / wall_ticks ratio, not cumulative)
+- 02-03: Arc<RwLock<Option<MetricsSnapshot>>> cache shared between polling task and SessionHandle
+- 02-03: Clone Arc before dropping sessions lock to avoid nested async borrow conflicts
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T09:42:11Z
-Stopped at: Completed 02-02-PLAN.md
-Resume file: .planning/phases/02-pty-process-management/02-03-PLAN.md
+Last session: 2026-03-04T09:53:31Z
+Stopped at: Completed 02-03-PLAN.md
+Resume file: Phase 2 complete. Next: Phase 3 planning.
