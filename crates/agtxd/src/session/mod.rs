@@ -6,4 +6,4 @@ mod types;
 pub use manager::SessionManager;
 pub use metrics::{metrics_polling_task, MetricsCollector, MetricsSnapshot};
 pub use output::SessionOutput;
-pub use types::{SessionHandle, SessionInfo, SessionState, SpawnRequest};
+pub use types::{OutputEvent, SessionHandle, SessionInfo, SessionState, SpawnRequest};

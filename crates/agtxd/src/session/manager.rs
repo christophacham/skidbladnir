@@ -7,12 +7,12 @@ use anyhow::Context;
 use chrono::Utc;
 use pty_process::{OwnedReadPty, Size};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use uuid::Uuid;
 
 use super::metrics::{metrics_polling_task, MetricsSnapshot};
 use super::output::SessionOutput;
-use super::types::{SessionHandle, SessionInfo, SessionState, SpawnRequest};
+use super::types::{OutputEvent, SessionHandle, SessionInfo, SessionState, SpawnRequest};
 
 /// Session manager for PTY process lifecycle.
 ///
@@ -83,10 +83,18 @@ impl SessionManager {
         // Wrap output in Arc<RwLock> for shared access between reader task and manager
         let output = Arc::new(RwLock::new(output));
 
+        // Create broadcast channel for fan-out to WebSocket subscribers
+        let (output_tx, _) = broadcast::channel::<OutputEvent>(256);
+
         // Spawn reader task to continuously capture PTY output
         let reader_output = output.clone();
         let reader_id = id;
-        let reader_handle = tokio::spawn(reader_task(read_pty, reader_output, reader_id));
+        let reader_handle = tokio::spawn(reader_task(
+            read_pty,
+            reader_output,
+            output_tx.clone(),
+            reader_id,
+        ));
 
         // Start metrics polling task
         let session_start = Instant::now();
@@ -109,6 +117,8 @@ impl SessionManager {
             created_at: Utc::now(),
             metrics: metrics_cache,
             metrics_handle: Some(metrics_handle),
+            output_tx,
+            output_path,
         };
 
         // Insert into sessions map
@@ -218,6 +228,51 @@ impl SessionManager {
         Some(tail)
     }
 
+    /// Write raw bytes to a session's PTY stdin (no newline appended).
+    /// Used by WebSocket handler for raw input forwarding.
+    pub async fn write_raw(&self, id: Uuid, input: &[u8]) -> anyhow::Result<()> {
+        let sessions = self.sessions.read().await;
+        let handle = sessions
+            .get(&id)
+            .ok_or_else(|| anyhow::anyhow!("Session not found: {}", id))?;
+        let mut write_pty = handle.write_pty.lock().await;
+        write_pty
+            .write_all(input)
+            .await
+            .context("Failed to write to PTY")?;
+        write_pty
+            .flush()
+            .await
+            .context("Failed to flush PTY write")?;
+        Ok(())
+    }
+
+    /// Subscribe to a session's output broadcast channel.
+    /// Returns the receiver, output Arc (for initial state), and output file path (for history reads).
+    /// Clones Arcs immediately and drops the sessions lock before returning.
+    pub async fn subscribe(
+        &self,
+        id: Uuid,
+    ) -> Option<(
+        broadcast::Receiver<OutputEvent>,
+        Arc<RwLock<SessionOutput>>,
+        PathBuf,
+    )> {
+        let sessions = self.sessions.read().await;
+        let handle = sessions.get(&id)?;
+        let rx = handle.output_tx.subscribe();
+        let output = handle.output.clone();
+        let output_path = handle.output_path.clone();
+        Some((rx, output, output_path))
+    }
+
+    /// Get the output file path for a session (for REST offset/limit reads).
+    pub async fn get_output_path(&self, id: Uuid) -> Option<PathBuf> {
+        let sessions = self.sessions.read().await;
+        let handle = sessions.get(&id)?;
+        Some(handle.output_path.clone())
+    }
+
     /// Kill a session: terminate the child process and clean up resources.
     pub async fn kill(&self, id: Uuid) -> anyhow::Result<()> {
         let mut handle = {
@@ -297,9 +352,11 @@ impl Drop for SessionManager {
 }
 
 /// Background task that reads from the PTY and writes to the session output.
+/// Publishes each read to the broadcast channel for WebSocket fan-out.
 async fn reader_task(
     mut read_pty: OwnedReadPty,
     output: Arc<RwLock<SessionOutput>>,
+    output_tx: broadcast::Sender<OutputEvent>,
     session_id: Uuid,
 ) {
     let mut buf = [0u8; 4096];
@@ -307,11 +364,13 @@ async fn reader_task(
         match read_pty.read(&mut buf).await {
             Ok(0) => {
                 tracing::info!(session_id = %session_id, "PTY EOF");
+                let _ = output_tx.send(OutputEvent::StateChange(SessionState::Exited(0)));
                 break;
             }
             Ok(n) => {
+                let data = buf[..n].to_vec();
                 let mut out = output.write().await;
-                if let Err(e) = out.append(&buf[..n]).await {
+                if let Err(e) = out.append(&data).await {
                     tracing::error!(
                         session_id = %session_id,
                         error = %e,
@@ -319,11 +378,19 @@ async fn reader_task(
                     );
                     break;
                 }
+                let offset = out.total_bytes() - data.len() as u64;
+                // Publish to broadcast -- ignore error (means no receivers)
+                let _ = output_tx.send(OutputEvent::Data {
+                    bytes: data,
+                    offset,
+                });
+                drop(out); // release write lock promptly
             }
             Err(e) => {
                 // EIO is expected when the child process exits and the PTY closes
                 if e.raw_os_error() == Some(libc::EIO) {
                     tracing::info!(session_id = %session_id, "PTY closed (EIO)");
+                    let _ = output_tx.send(OutputEvent::StateChange(SessionState::Exited(0)));
                 } else {
                     tracing::error!(
                         session_id = %session_id,

@@ -5,12 +5,21 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use pty_process::OwnedWritePty;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use super::metrics::MetricsSnapshot;
 use super::output::SessionOutput;
+
+/// Event broadcast to WebSocket subscribers.
+#[derive(Debug, Clone)]
+pub enum OutputEvent {
+    /// New PTY output bytes with their offset in the session log.
+    Data { bytes: Vec<u8>, offset: u64 },
+    /// Session state changed (e.g., process exited).
+    StateChange(SessionState),
+}
 
 /// State of a PTY session in its lifecycle.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -104,4 +113,8 @@ pub struct SessionHandle {
     pub metrics: Arc<RwLock<Option<MetricsSnapshot>>>,
     /// Handle to the metrics polling task (aborted on session kill).
     pub metrics_handle: Option<JoinHandle<()>>,
+    /// Broadcast sender for fan-out of output events to WebSocket subscribers.
+    pub output_tx: broadcast::Sender<OutputEvent>,
+    /// Path to the append-only log file (needed for reconnection/history reads).
+    pub output_path: PathBuf,
 }

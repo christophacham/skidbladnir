@@ -67,4 +67,26 @@ impl SessionOutput {
     pub fn total_bytes(&self) -> u64 {
         self.total_bytes
     }
+
+    /// Read bytes from an append-only log file starting at the given offset.
+    /// Returns up to `limit` bytes. Returns empty vec if offset >= file_size.
+    pub async fn read_range(
+        path: &std::path::Path,
+        offset: u64,
+        limit: usize,
+    ) -> anyhow::Result<Vec<u8>> {
+        use tokio::io::{AsyncReadExt, AsyncSeekExt};
+        let mut file = tokio::fs::File::open(path).await?;
+        let metadata = file.metadata().await?;
+        let file_size = metadata.len();
+        if offset >= file_size {
+            return Ok(vec![]);
+        }
+        let available = (file_size - offset) as usize;
+        let read_size = available.min(limit);
+        let mut buf = vec![0u8; read_size];
+        file.seek(std::io::SeekFrom::Start(offset)).await?;
+        file.read_exact(&mut buf).await?;
+        Ok(buf)
+    }
 }
