@@ -116,7 +116,7 @@ Plans:
   3. Artifact files are detected via polling with glob support and status updates appear on task cards
   4. Cyclic phases work (Review to Planning with incrementing phase counter)
   5. User can create GitHub PRs from the browser with title, description, and base branch selection and view syntax-highlighted diffs
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — Backend WorkflowService with phase transitions, session_id migration, API endpoints (advance, diff, pr, plugins), artifact polling
@@ -198,7 +198,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 | 3. WebSocket Streaming | 2/2 | Complete   | 2026-03-04 |
 | 4. Frontend Kanban Board | 3/3 | Complete   | 2026-03-04 |
 | 5. Task Detail & Live Output | 1/2 | In Progress |  |
-| 6. Workflow Engine | 0/3 | Not started | - |
+| 6. Workflow Engine | 1/3 | In Progress|  |
 | 7. Structured Output & Session Intelligence | 0/2 | Not started | - |
 | 8. System Monitoring | 0/1 | Not started | - |
 | 9. Auth & Deployment | 0/2 | Not started | - |

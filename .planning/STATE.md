@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 plans verified
-last_updated: "2026-03-04T18:52:07.406Z"
-last_activity: 2026-03-04 -- Completed Plan 05-02 (UI components for live output)
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-04T19:50:08Z"
+last_activity: 2026-03-04 -- Completed Plan 06-01 (Backend WorkflowService)
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 15
-  completed_plans: 12
-  percent: 100
+  completed_plans: 13
+  percent: 87
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** Manage multiple coding agent sessions from any browser with full reconnectable history, without losing any of the workflow semantics that make AGTX useful.
-**Current focus:** Phase 5 - Task Detail & Live Output
+**Current focus:** Phase 6 - Workflow Engine
 
 ## Current Position
 
-Phase: 5 of 10 (Task Detail & Live Output)
-Plan: 2 of 2 in current phase
+Phase: 6 of 10 (Workflow Engine)
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 05-02 (UI components for live output)
+Last activity: 2026-03-04 -- Completed Plan 06-01 (Backend WorkflowService)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [██████████] 100%
 | Phase 04 P03 | 3min | 2 tasks | 6 files |
 | Phase 05 P01 | 4min | 2 tasks | 7 files |
 | Phase 05 P02 | 4min | 3 tasks | 11 files |
+| Phase 06 P01 | 16min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,10 @@ Recent decisions affecting current work:
 - [Phase 05]: CSS grid split-view 2fr/3fr in +page.svelte parent for clean Board separation
 - [Phase 05]: Global Escape handler priority: modals > command palette > detail panel > search
 - [Phase 05]: StatusDot uses inline SVG checkmark for ready state (cross-platform rendering)
+- 06-01: Backlog->Planning runs heavy setup in background tokio::spawn for instant API response
+- 06-01: WorkflowService auto-created in AppState::new() from existing SessionManager
+- 06-01: Artifact polling uses HashSet deduplication to avoid re-pushing detected artifacts
+- 06-01: PR generation returns empty strings on agent failure (manual entry fallback)
 
 ### Pending Todos
 
@@ -126,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T18:52:07.402Z
-Stopped at: Phase 6 plans verified
-Resume file: .planning/phases/06-workflow-engine/06-01-PLAN.md
+Last session: 2026-03-04T19:50:08Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: .planning/phases/06-workflow-engine/06-02-PLAN.md

@@ -60,14 +60,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Workflow Engine
 
-- [ ] **FLOW-01**: Phase transitions trigger side effects (worktree creation, agent spawn, skill deployment)
-- [ ] **FLOW-02**: Plugins resolve via project-local → global → bundled precedence
-- [ ] **FLOW-03**: Skills deploy to agent-native paths in worktrees per agent type
-- [ ] **FLOW-04**: Commands and prompts resolve per agent type with format translation
-- [ ] **FLOW-05**: Artifact files detected via polling with glob support
-- [ ] **FLOW-06**: Cyclic phases supported (Review → Planning with incrementing phase counter)
-- [ ] **FLOW-07**: User can create GitHub PRs from browser (title, description, base branch)
-- [ ] **FLOW-08**: User can view syntax-highlighted git diffs for task worktrees
+- [x] **FLOW-01**: Phase transitions trigger side effects (worktree creation, agent spawn, skill deployment)
+- [x] **FLOW-02**: Plugins resolve via project-local → global → bundled precedence
+- [x] **FLOW-03**: Skills deploy to agent-native paths in worktrees per agent type
+- [x] **FLOW-04**: Commands and prompts resolve per agent type with format translation
+- [x] **FLOW-05**: Artifact files detected via polling with glob support
+- [x] **FLOW-06**: Cyclic phases supported (Review → Planning with incrementing phase counter)
+- [x] **FLOW-07**: User can create GitHub PRs from browser (title, description, base branch)
+- [x] **FLOW-08**: User can view syntax-highlighted git diffs for task worktrees
 
 ### Auth & Deployment
 
@@ -171,14 +171,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUTPUT-06 | Phase 7: Structured Output & Session Intelligence | Pending |
 | OUTPUT-07 | Phase 7: Structured Output & Session Intelligence | Pending |
 | OUTPUT-08 | Phase 7: Structured Output & Session Intelligence | Pending |
-| FLOW-01 | Phase 6: Workflow Engine | Pending |
-| FLOW-02 | Phase 6: Workflow Engine | Pending |
-| FLOW-03 | Phase 6: Workflow Engine | Pending |
-| FLOW-04 | Phase 6: Workflow Engine | Pending |
-| FLOW-05 | Phase 6: Workflow Engine | Pending |
-| FLOW-06 | Phase 6: Workflow Engine | Pending |
-| FLOW-07 | Phase 6: Workflow Engine | Pending |
-| FLOW-08 | Phase 6: Workflow Engine | Pending |
+| FLOW-01 | Phase 6: Workflow Engine | Complete |
+| FLOW-02 | Phase 6: Workflow Engine | Complete |
+| FLOW-03 | Phase 6: Workflow Engine | Complete |
+| FLOW-04 | Phase 6: Workflow Engine | Complete |
+| FLOW-05 | Phase 6: Workflow Engine | Complete |
+| FLOW-06 | Phase 6: Workflow Engine | Complete |
+| FLOW-07 | Phase 6: Workflow Engine | Complete |
+| FLOW-08 | Phase 6: Workflow Engine | Complete |
 | AUTH-01 | Phase 9: Auth & Deployment | Pending |
 | AUTH-02 | Phase 9: Auth & Deployment | Pending |
 | AUTH-03 | Phase 9: Auth & Deployment | Pending |
