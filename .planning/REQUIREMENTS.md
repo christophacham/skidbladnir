@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PTY-02**: Daemon reads agent PTY output as continuous byte stream
 - [x] **PTY-03**: Daemon writes to agent PTY stdin (commands, text input from browser)
 - [x] **PTY-04**: Daemon resizes PTY on browser viewport change
-- [ ] **PTY-05**: Daemon cleans up agent processes on exit with PR_SET_PDEATHSIG to prevent zombies
+- [x] **PTY-05**: Daemon cleans up agent processes on exit with PR_SET_PDEATHSIG to prevent zombies
 - [x] **PTY-06**: Daemon tracks PIDs for all managed agent processes
 - [ ] **PTY-07**: Daemon reports per-agent resource usage (CPU/memory per PID via /proc)
 
@@ -145,7 +145,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PTY-02 | Phase 2: PTY Process Management | Complete |
 | PTY-03 | Phase 2: PTY Process Management | Complete |
 | PTY-04 | Phase 2: PTY Process Management | Complete |
-| PTY-05 | Phase 2: PTY Process Management | Pending |
+| PTY-05 | Phase 2: PTY Process Management | Complete |
 | PTY-06 | Phase 2: PTY Process Management | Complete |
 | PTY-07 | Phase 2: PTY Process Management | Pending |
 | WS-01 | Phase 3: WebSocket Streaming | Pending |

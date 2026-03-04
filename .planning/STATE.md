@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-04T09:29:22Z"
-last_activity: 2026-03-04 -- Completed Plan 02-01 (session types, output, SessionManager)
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-04T09:42:11Z"
+last_activity: 2026-03-04 -- Completed Plan 02-02 (REST API endpoints and shutdown integration)
 progress:
   total_phases: 10
   completed_phases: 1
   total_plans: 3
-  completed_plans: 3
-  percent: 13
+  completed_plans: 4
+  percent: 17
 ---
 
 # Project State
@@ -26,28 +26,28 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 2 of 10 (PTY Process Management) -- IN PROGRESS
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 02-01 (session types, output, SessionManager)
+Last activity: 2026-03-04 -- Completed Plan 02-02 (REST API endpoints and shutdown integration)
 
-Progress: [█▒░░░░░░░░] 13%
+Progress: [█▓░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 9min
-- Total execution time: 0.43 hours
+- Total execution time: 0.57 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-daemon-foundation | 2 | 14min | 7min |
-| 02-pty-process-management | 1 | 12min | 12min |
+| 02-pty-process-management | 2 | 20min | 10min |
 
 **Recent Trend:**
-- Last 5 plans: 8min, 6min, 12min
+- Last 5 plans: 8min, 6min, 12min, 8min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -73,6 +73,10 @@ Recent decisions affecting current work:
 - 02-01: OwnedWritePty wrapped in Mutex for fine-grained write locking
 - 02-01: OwnedWritePty::resize() works after into_split() (RESEARCH open question #2 resolved)
 - 02-01: Reader task treats EIO as normal PTY close, not error
+- 02-02: Router cloned per test request to share SessionManager state across request sequences
+- 02-02: Output endpoint returns base64-encoded JSON for API consumer convenience
+- 02-02: Interrupt/kill endpoints use nix signal directly on PID (no SessionManager method needed)
+- 02-02: Drop impl uses try_read() for non-blocking best-effort session cleanup
 
 ### Pending Todos
 
@@ -85,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T09:29:22Z
-Stopped at: Completed 02-01-PLAN.md
-Resume file: .planning/phases/02-pty-process-management/02-02-PLAN.md
+Last session: 2026-03-04T09:42:11Z
+Stopped at: Completed 02-02-PLAN.md
+Resume file: .planning/phases/02-pty-process-management/02-03-PLAN.md
