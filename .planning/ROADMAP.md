@@ -116,12 +116,12 @@ Plans:
   3. Artifact files are detected via polling with glob support and status updates appear on task cards
   4. Cyclic phases work (Review to Planning with incrementing phase counter)
   5. User can create GitHub PRs from the browser with title, description, and base branch selection and view syntax-highlighted diffs
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
-- [ ] 06-03: TBD
+- [ ] 06-01-PLAN.md — Backend WorkflowService with phase transitions, session_id migration, API endpoints (advance, diff, pr, plugins), artifact polling
+- [ ] 06-02-PLAN.md — Frontend advance buttons, plugin select, tabbed detail panel, workflow API client, command palette actions
+- [ ] 06-03-PLAN.md — Frontend syntax-highlighted DiffView with Shiki, PR creation modal with AI generation, PR status tab
 
 ### Phase 7: Structured Output & Session Intelligence
 **Goal**: Agent output is parsed into semantic sections with interactive elements, and users can search history and orient quickly on reconnect
