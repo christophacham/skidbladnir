@@ -9,9 +9,9 @@ last_activity: 2026-03-04 -- Completed Plan 03-01 (WS infrastructure and broadca
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 26
+  total_plans: 7
+  completed_plans: 7
+  percent: 30
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 ## Current Position
 
 Phase: 3 of 10 (WebSocket Streaming)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 03-01 (WS infrastructure and broadcast)
+Last activity: 2026-03-04 -- Completed Plan 03-02 (WebSocket handler with bidirectional streaming)
 
-Progress: [██░░░░░░░░] 26%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
@@ -45,10 +45,10 @@ Progress: [██░░░░░░░░] 26%
 |-------|-------|-------|----------|
 | 01-daemon-foundation | 2 | 14min | 7min |
 | 02-pty-process-management | 3 | 28min | 9min |
-| 03-websocket-streaming | 1 | 5min | 5min |
+| 03-websocket-streaming | 2 | 12min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 12min, 8min, 8min, 5min
+- Last 5 plans: 12min, 8min, 8min, 5min, 7min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -87,6 +87,9 @@ Recent decisions affecting current work:
 - 03-01: read_range is static method on SessionOutput (no instance/lock needed)
 - 03-01: Replaced hand-rolled base64_encode with base64 crate standard engine
 - 03-01: Output endpoint uses ring buffer when offset absent/0, log file when offset > 0
+- 03-02: mpsc channel bridge pattern for WS send task (avoids futures-util as main dep)
+- 03-02: tokio::select! loop multiplexes inbound/outbound on single WebSocket
+- 03-02: WebSocket route at top level in api_router (before session nest) for extractor compatibility
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T10:23:55Z
-Stopped at: Completed 03-01-PLAN.md
-Resume file: .planning/phases/03-websocket-streaming/03-01-SUMMARY.md
+Last session: 2026-03-04T10:33:21Z
+Stopped at: Completed 03-02-PLAN.md
+Resume file: .planning/phases/03-websocket-streaming/03-02-SUMMARY.md

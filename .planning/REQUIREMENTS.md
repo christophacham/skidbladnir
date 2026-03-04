@@ -30,9 +30,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **WS-01**: Browser receives live agent output via WebSocket as it is produced
 - [x] **WS-02**: Daemon persists session output to disk as PTY bytes arrive
-- [ ] **WS-03**: User reconnects and sees full history via lazy-loaded virtualized scrollback
-- [ ] **WS-04**: User sees connection status indicator (connected/disconnected/reconnecting)
-- [ ] **WS-05**: Output auto-scrolls to bottom; pauses on manual scroll-up with "jump to bottom" button
+- [x] **WS-03**: User reconnects and sees full history via lazy-loaded virtualized scrollback
+- [x] **WS-04**: User sees connection status indicator (connected/disconnected/reconnecting)
+- [x] **WS-05**: Output auto-scrolls to bottom; pauses on manual scroll-up with "jump to bottom" button
 - [ ] **WS-06**: User sees reconnect summary banner showing status since last disconnect
 - [ ] **WS-07**: User can full-text search within session output history
 - [ ] **WS-08**: Timeline markers appear at phase transitions and user inputs
@@ -150,9 +150,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PTY-07 | Phase 2: PTY Process Management | Complete |
 | WS-01 | Phase 3: WebSocket Streaming | Complete |
 | WS-02 | Phase 3: WebSocket Streaming | Complete |
-| WS-03 | Phase 3: WebSocket Streaming | Pending |
-| WS-04 | Phase 3: WebSocket Streaming | Pending |
-| WS-05 | Phase 3: WebSocket Streaming | Pending |
+| WS-03 | Phase 3: WebSocket Streaming | Complete |
+| WS-04 | Phase 3: WebSocket Streaming | Complete |
+| WS-05 | Phase 3: WebSocket Streaming | Complete |
 | WS-06 | Phase 7: Structured Output & Session Intelligence | Pending |
 | WS-07 | Phase 7: Structured Output & Session Intelligence | Pending |
 | WS-08 | Phase 7: Structured Output & Session Intelligence | Pending |

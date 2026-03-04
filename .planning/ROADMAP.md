@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Daemon Foundation** - Axum server with REST API skeleton, structured logging, health checks, and lifecycle management (completed 2026-03-04)
 - [x] **Phase 2: PTY Process Management** - Agent process spawning and control via pty-process with async I/O, session lifecycle, and /proc resource monitoring (completed 2026-03-04)
-- [ ] **Phase 3: WebSocket Streaming** - Bidirectional real-time agent output streaming with session persistence and reconnection
+- [x] **Phase 3: WebSocket Streaming** - Bidirectional real-time agent output streaming with session persistence and reconnection (completed 2026-03-04)
 - [ ] **Phase 4: Frontend Kanban Board** - SvelteKit SPA with 5-column kanban layout, task CRUD, and project navigation
 - [ ] **Phase 5: Task Detail & Live Output** - Split-view detail panel with live agent output streaming and phase status
 - [ ] **Phase 6: Workflow Engine** - Phase transitions, plugin resolution, skill deployment, artifact detection, and PR workflow
@@ -68,7 +68,7 @@ Plans:
   3. Reconnecting client loads full history via lazy-loaded virtualized scrollback
   4. Connection status indicator shows connected, disconnected, and reconnecting states
   5. Output auto-scrolls to bottom during live streaming and pauses when user scrolls up with a "jump to bottom" button
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — Broadcast channel infrastructure, WS message types, output read_range, write_raw, offset/limit on output endpoint
@@ -194,7 +194,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 |-------|----------------|--------|-----------|
 | 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
 | 2. PTY Process Management | 3/3 | Complete   | 2026-03-04 |
-| 3. WebSocket Streaming | 1/2 | In Progress|  |
+| 3. WebSocket Streaming | 2/2 | Complete   | 2026-03-04 |
 | 4. Frontend Kanban Board | 0/2 | Not started | - |
 | 5. Task Detail & Live Output | 0/2 | Not started | - |
 | 6. Workflow Engine | 0/3 | Not started | - |
