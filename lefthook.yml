@@ -3,10 +3,13 @@ pre-commit:
   commands:
     cargo-fmt:
       glob: "*.rs"
-      run: $HOME/.cargo/bin/cargo fmt -- --check
+      run: cargo fmt -- --check
     cargo-clippy:
       glob: "*.rs"
-      run: $HOME/.cargo/bin/cargo clippy --workspace -- -D warnings
+      run: cargo clippy --workspace -- -D warnings
+    cargo-test:
+      glob: "*.rs"
+      run: cargo test --workspace --exclude agtx
     no-ai-attribution:
       glob: "*.{rs,toml,json,md,css,html}"
       exclude: ".claude/**|.planning/**"
@@ -20,9 +23,9 @@ pre-push:
   parallel: true
   commands:
     cargo-test:
-      run: $HOME/.cargo/bin/cargo test --workspace
+      run: cargo test --workspace
     cargo-build:
-      run: $HOME/.cargo/bin/cargo build --workspace 2>&1 | (! grep -i 'warning')
+      run: cargo build --workspace 2>&1 | (! grep -i 'warning')
 
 commit-msg:
   commands:
