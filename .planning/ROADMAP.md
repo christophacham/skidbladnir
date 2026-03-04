@@ -68,11 +68,11 @@ Plans:
   3. Reconnecting client loads full history via lazy-loaded virtualized scrollback
   4. Connection status indicator shows connected, disconnected, and reconnecting states
   5. Output auto-scrolls to bottom during live streaming and pauses when user scrolls up with a "jump to bottom" button
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Broadcast channel infrastructure, WS message types, output read_range, write_raw, offset/limit on output endpoint
+- [ ] 03-02-PLAN.md — WebSocket handler with split socket, cursor reconnection, input forwarding, and integration tests
 
 ### Phase 4: Frontend Kanban Board
 **Goal**: Users see and manage tasks through a 5-column kanban board with full CRUD, search, and project switching
