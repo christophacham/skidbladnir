@@ -3,6 +3,7 @@
 	import Board from '$lib/components/Board.svelte';
 	import CreateTaskModal from '$lib/components/CreateTaskModal.svelte';
 	import DeleteConfirmModal from '$lib/components/DeleteConfirmModal.svelte';
+	import CommandPalette from '$lib/components/CommandPalette.svelte';
 </script>
 
 <div class="flex flex-col h-full">
@@ -14,3 +15,4 @@
 
 <CreateTaskModal />
 <DeleteConfirmModal />
+<CommandPalette />
