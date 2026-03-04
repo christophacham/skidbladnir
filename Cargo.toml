@@ -1,3 +1,26 @@
+[workspace]
+members = ["crates/agtx-core", "crates/agtxd"]
+resolver = "2"
+
+[workspace.dependencies]
+tokio = { version = "1.44", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+anyhow = "1.0"
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.16", features = ["v4"] }
+rusqlite = { version = "0.34", features = ["bundled"] }
+directories = "6.0"
+which = "7.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "json", "env-filter", "registry"] }
+tracing-appender = "0.2"
+axum = { version = "0.8", features = ["tracing"] }
+tower-http = { version = "0.6", features = ["trace", "timeout"] }
+notify = "8"
+
 [package]
 name = "agtx"
 version = "0.1.0"
@@ -10,34 +33,35 @@ keywords = ["tui", "tmux", "agents", "kanban", "claude"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
+# Shared core library
+agtx-core = { path = "crates/agtx-core" }
+
 # TUI
 ratatui = "0.30"
 crossterm = "0.29"
 
 # Async runtime
-tokio = { version = "1.44", features = ["full"] }
+tokio = { workspace = true }
 
 # Database
-rusqlite = { version = "0.34", features = ["bundled"] }
+rusqlite = { workspace = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toml = "0.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
 
 # Utilities
-anyhow = "1.0"
-thiserror = "2.0"
-which = "7.0"
-directories = "6.0"
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.16", features = ["v4"] }
-
-
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+which = { workspace = true }
+directories = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
 
 [features]
 default = []
-test-mocks = ["dep:mockall"]
+test-mocks = ["dep:mockall", "agtx-core/test-mocks"]
 
 [dev-dependencies]
 tempfile = "3"

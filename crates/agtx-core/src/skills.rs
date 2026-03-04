@@ -2,10 +2,10 @@
 /// Skills follow the Agent Skills spec (SKILL.md with YAML frontmatter + markdown).
 /// Content is loaded from .md files at compile time via include_str!().
 
-pub const RESEARCH_SKILL: &str = include_str!("../plugins/agtx/skills/research.md");
-pub const PLAN_SKILL: &str = include_str!("../plugins/agtx/skills/plan.md");
-pub const EXECUTE_SKILL: &str = include_str!("../plugins/agtx/skills/execute.md");
-pub const REVIEW_SKILL: &str = include_str!("../plugins/agtx/skills/review.md");
+pub const RESEARCH_SKILL: &str = include_str!("../../../plugins/agtx/skills/research.md");
+pub const PLAN_SKILL: &str = include_str!("../../../plugins/agtx/skills/plan.md");
+pub const EXECUTE_SKILL: &str = include_str!("../../../plugins/agtx/skills/execute.md");
+pub const REVIEW_SKILL: &str = include_str!("../../../plugins/agtx/skills/review.md");
 
 /// Default built-in skills: (directory_name, SKILL.md content)
 /// Used for worktree phases (Research, Planning, Running, Review)
@@ -131,22 +131,22 @@ pub const BUNDLED_PLUGINS: &[(&str, &str, &str)] = &[
     (
         "agtx",
         "Built-in workflow with skills and prompts",
-        include_str!("../plugins/agtx/plugin.toml"),
+        include_str!("../../../plugins/agtx/plugin.toml"),
     ),
     (
         "gsd",
         "Get Shit Done - structured spec-driven development",
-        include_str!("../plugins/gsd/plugin.toml"),
+        include_str!("../../../plugins/gsd/plugin.toml"),
     ),
     (
         "spec-kit",
         "Spec-Driven Development by GitHub",
-        include_str!("../plugins/spec-kit/plugin.toml"),
+        include_str!("../../../plugins/spec-kit/plugin.toml"),
     ),
     (
         "void",
         "Plain agent session - no prompting or skills",
-        include_str!("../plugins/void/plugin.toml"),
+        include_str!("../../../plugins/void/plugin.toml"),
     ),
 ];
 

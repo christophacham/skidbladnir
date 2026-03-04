@@ -1,0 +1,25 @@
+[package]
+name = "agtx-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+rusqlite = { workspace = true }
+directories = { workspace = true }
+which = { workspace = true }
+tracing = { workspace = true }
+
+[dependencies.mockall]
+version = "0.13"
+optional = true
+
+[features]
+default = []
+test-mocks = ["dep:mockall"]
