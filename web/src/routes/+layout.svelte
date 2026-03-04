@@ -4,6 +4,7 @@
 	import { projectStore } from '$lib/stores/projects.svelte';
 	import { taskStore } from '$lib/stores/tasks.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	let { children } = $props();
 
@@ -41,4 +42,9 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-{@render children()}
+<div class="flex h-screen overflow-hidden">
+	<Sidebar />
+	<div class="flex-1 flex flex-col min-w-0 h-full">
+		{@render children()}
+	</div>
+</div>

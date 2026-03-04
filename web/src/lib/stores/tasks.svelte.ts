@@ -1,12 +1,25 @@
 import type { Task, TaskStatus, CreateTaskRequest } from '$lib/types';
 import { COLUMNS } from '$lib/types';
 import { fetchTasks, createTask as apiCreateTask, deleteTask as apiDeleteTask } from '$lib/api/tasks';
+import { projectStore } from '$lib/stores/projects.svelte';
 
 class TaskStore {
 	list = $state<Task[]>([]);
 	loading = $state(false);
 	error = $state<string | null>(null);
 	searchQuery = $state('');
+
+	/** All tasks unfiltered -- used for sidebar task counts across projects */
+	get allTasks(): Task[] {
+		return this.list;
+	}
+
+	/** Tasks filtered by the active project */
+	projectTasks = $derived.by(() => {
+		const activeId = projectStore.activeId;
+		if (!activeId) return this.list;
+		return this.list.filter((t) => t.project_id === activeId);
+	});
 
 	byStatus = $derived.by(() => {
 		const groups: Record<TaskStatus, Task[]> = {
@@ -16,7 +29,7 @@ class TaskStore {
 			Review: [],
 			Done: []
 		};
-		for (const task of this.list) {
+		for (const task of this.projectTasks) {
 			if (groups[task.status]) {
 				groups[task.status].push(task);
 			}
@@ -26,8 +39,8 @@ class TaskStore {
 
 	filtered = $derived.by(() => {
 		const query = this.searchQuery.toLowerCase().trim();
-		if (!query) return this.list;
-		return this.list.filter((task) => {
+		if (!query) return this.projectTasks;
+		return this.projectTasks.filter((task) => {
 			const titleMatch = task.title.toLowerCase().includes(query);
 			const descMatch = task.description?.toLowerCase().includes(query) ?? false;
 			return titleMatch || descMatch;
