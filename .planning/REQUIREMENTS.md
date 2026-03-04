@@ -44,8 +44,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **BOARD-03**: User can create tasks with title and description
 - [x] **BOARD-04**: User can delete tasks with confirmation dialog
 - [x] **BOARD-05**: User can search/filter tasks across title and description
-- [ ] **BOARD-06**: User can switch between projects via multi-project sidebar
-- [ ] **BOARD-07**: User can invoke command palette (Ctrl+K) for fuzzy action search
+- [x] **BOARD-06**: User can switch between projects via multi-project sidebar
+- [x] **BOARD-07**: User can invoke command palette (Ctrl+K) for fuzzy action search
 
 ### Task Detail & Agent Output
 
@@ -161,8 +161,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BOARD-03 | Phase 4: Frontend Kanban Board | Complete |
 | BOARD-04 | Phase 4: Frontend Kanban Board | Complete |
 | BOARD-05 | Phase 4: Frontend Kanban Board | Complete |
-| BOARD-06 | Phase 4: Frontend Kanban Board | Pending |
-| BOARD-07 | Phase 4: Frontend Kanban Board | Pending |
+| BOARD-06 | Phase 4: Frontend Kanban Board | Complete |
+| BOARD-07 | Phase 4: Frontend Kanban Board | Complete |
 | OUTPUT-01 | Phase 5: Task Detail & Live Output | Pending |
 | OUTPUT-02 | Phase 5: Task Detail & Live Output | Pending |
 | OUTPUT-03 | Phase 5: Task Detail & Live Output | Pending |
