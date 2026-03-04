@@ -11,10 +11,13 @@ fn test_init_logging_creates_log_directory() {
     // Directory should not exist yet
     assert!(!log_dir.exists());
 
-    let (_reload, _guard) = logging::init_logging(&log_dir, "info").unwrap();
+    let (_subscriber, _reload, _guard) = logging::build_logging(&log_dir, "info").unwrap();
 
     // After init, the log directory must exist
-    assert!(log_dir.exists(), "init_logging should create the log directory");
+    assert!(
+        log_dir.exists(),
+        "init_logging should create the log directory"
+    );
 }
 
 #[test]
@@ -22,10 +25,12 @@ fn test_logging_writes_json_to_file() {
     let tmp = tempfile::tempdir().unwrap();
     let log_dir = tmp.path().join("logs");
 
-    let (_reload, guard) = logging::init_logging(&log_dir, "info").unwrap();
+    let (subscriber, _reload, guard) = logging::build_logging(&log_dir, "info").unwrap();
 
-    // Emit a log event
-    tracing::info!(test_marker = "json_check", "hello from test");
+    // Use with_default so we don't conflict with other tests
+    tracing::subscriber::with_default(subscriber, || {
+        tracing::info!(test_marker = "json_check", "hello from test");
+    });
 
     // Drop the guard to flush the non-blocking writer
     drop(guard);
@@ -61,7 +66,10 @@ fn test_logging_writes_json_to_file() {
             }
         }
     }
-    assert!(found_marker, "Should find test_marker=json_check in JSON log output");
+    assert!(
+        found_marker,
+        "Should find test_marker=json_check in JSON log output"
+    );
 }
 
 #[test]
@@ -69,7 +77,7 @@ fn test_reload_handle_accepts_new_filter() {
     let tmp = tempfile::tempdir().unwrap();
     let log_dir = tmp.path().join("logs");
 
-    let (reload_handle, _guard) = logging::init_logging(&log_dir, "info").unwrap();
+    let (_subscriber, reload_handle, _guard) = logging::build_logging(&log_dir, "info").unwrap();
 
     // Changing the filter should not panic
     let new_filter = EnvFilter::try_new("debug").unwrap();

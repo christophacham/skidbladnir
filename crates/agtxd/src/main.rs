@@ -6,18 +6,26 @@ use tokio::net::TcpListener;
 use agtx_core::config::GlobalConfig;
 use agtx_core::db::Database;
 use agtxd::api;
+use agtxd::logging;
 use agtxd::shutdown;
 use agtxd::state::AppState;
 
-const DEFAULT_PORT: u16 = 3742;
-const DEFAULT_BIND: &str = "127.0.0.1";
-
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load config first (needed for logging and server settings)
+    let config = GlobalConfig::load().unwrap_or_default();
+
+    // Initialize structured logging (JSON file + pretty stderr)
+    let log_dir = GlobalConfig::data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("logs");
+    let (_reload_handle, _guard) =
+        logging::init_logging(&log_dir, &config.daemon.log_level)?;
+
     // Parse CLI args for optional --port and --bind overrides
     let args: Vec<String> = std::env::args().collect();
-    let mut port = DEFAULT_PORT;
-    let mut bind = DEFAULT_BIND.to_string();
+    let mut port = config.daemon.port;
+    let mut bind = config.daemon.bind.clone();
 
     let mut i = 1;
     while i < args.len() {
@@ -69,13 +77,13 @@ async fn main() -> Result<()> {
         .await
         .with_context(|| format!("Failed to bind to {}", addr))?;
 
-    eprintln!("agtxd listening on {}", addr);
+    tracing::info!("agtxd listening on {}", addr);
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown::shutdown_signal())
         .await
         .context("Server error")?;
 
-    eprintln!("agtxd shut down cleanly");
+    tracing::info!("agtxd shut down cleanly");
     Ok(())
 }
