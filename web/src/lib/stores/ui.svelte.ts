@@ -2,13 +2,15 @@ import type { Task } from '$lib/types';
 
 const COLLAPSED_KEY = 'agtx-collapsed-columns';
 
-class UiStore {
+export class UiStore {
 	sidebarOpen = $state(false);
 	collapsedColumns = $state<Set<string>>(new Set());
 	createModalOpen = $state(false);
 	deleteTarget = $state<Task | null>(null);
 	commandPaletteOpen = $state(false);
 	searchFocused = $state(false);
+	selectedTask = $state<Task | null>(null);
+	detailPanelOpen = $derived(this.selectedTask !== null);
 
 	constructor() {
 		try {
@@ -58,6 +60,14 @@ class UiStore {
 
 	focusSearch(): void {
 		this.searchFocused = true;
+	}
+
+	selectTask(task: Task): void {
+		this.selectedTask = task;
+	}
+
+	closeDetail(): void {
+		this.selectedTask = null;
 	}
 }
 

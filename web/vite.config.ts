@@ -8,7 +8,8 @@ export default defineConfig({
 		proxy: {
 			'/api': {
 				target: 'http://localhost:3742',
-				changeOrigin: true
+				changeOrigin: true,
+				ws: true
 			},
 			'/health': {
 				target: 'http://localhost:3742',
