@@ -13,10 +13,7 @@ use crate::state::AppState;
 pub fn api_router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health::handler))
-        .route(
-            "/api/v1/sessions/{id}/ws",
-            get(ws::ws_handler),
-        )
+        .route("/api/v1/sessions/{id}/ws", get(ws::ws_handler))
         .nest("/api/v1/tasks", tasks::router())
         .nest("/api/v1/projects", projects::router())
         .nest("/api/v1/sessions", sessions::router())

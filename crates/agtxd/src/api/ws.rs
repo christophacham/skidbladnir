@@ -77,8 +77,8 @@ pub async fn ws_handler(
     Query(query): Query<WsQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, AppError> {
-    let uuid = Uuid::parse_str(&id)
-        .map_err(|_| AppError::BadRequest(format!("Invalid UUID: {}", id)))?;
+    let uuid =
+        Uuid::parse_str(&id).map_err(|_| AppError::BadRequest(format!("Invalid UUID: {}", id)))?;
 
     // Validate session exists BEFORE upgrading
     let sub = state
@@ -182,9 +182,7 @@ async fn handle_ws(
                         },
                         OutputEvent::StateChange(ss) => {
                             let (state_str, exit_code) = match ss {
-                                SessionState::Exited(code) => {
-                                    ("exited".to_string(), Some(code))
-                                }
+                                SessionState::Exited(code) => ("exited".to_string(), Some(code)),
                                 SessionState::Running => ("running".to_string(), None),
                                 SessionState::Spawning => ("spawning".to_string(), None),
                             };

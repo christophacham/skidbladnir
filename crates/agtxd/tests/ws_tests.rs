@@ -143,7 +143,11 @@ async fn ws_upgrade_succeeds() {
 
     let (id, _pid) = spawn_session(&app, "sleep 5").await;
 
-    let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
+    let ws_url = format!(
+        "{}/api/v1/sessions/{}/ws",
+        base_url.replace("http", "ws"),
+        id
+    );
     let (_sink, mut stream) = ws_connect(&ws_url).await;
 
     // Should receive a "connected" message
@@ -187,7 +191,11 @@ async fn ws_receives_live_output() {
 
     let (id, _pid) = spawn_session(&app, "echo test_output_xyz").await;
 
-    let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
+    let ws_url = format!(
+        "{}/api/v1/sessions/{}/ws",
+        base_url.replace("http", "ws"),
+        id
+    );
     let (_sink, mut stream) = ws_connect(&ws_url).await;
 
     // Read messages until we find output containing "test_output_xyz"
@@ -220,7 +228,11 @@ async fn ws_multiple_clients() {
     // Spawn a session that waits then produces output
     let (id, _pid) = spawn_session(&app, "sleep 0.3 && echo multi_test_marker").await;
 
-    let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
+    let ws_url = format!(
+        "{}/api/v1/sessions/{}/ws",
+        base_url.replace("http", "ws"),
+        id
+    );
 
     // Connect two clients
     let (_sink1, mut stream1) = ws_connect(&ws_url).await;
@@ -258,7 +270,11 @@ async fn ws_write_input() {
     // cat will echo back whatever we write
     let (id, _pid) = spawn_session(&app, "cat").await;
 
-    let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
+    let ws_url = format!(
+        "{}/api/v1/sessions/{}/ws",
+        base_url.replace("http", "ws"),
+        id
+    );
     let (mut sink, mut stream) = ws_connect(&ws_url).await;
 
     // Wait for connected message first
@@ -288,10 +304,7 @@ async fn ws_write_input() {
     })
     .await;
 
-    assert!(
-        msg.is_some(),
-        "Should receive echoed input hello_ws_input"
-    );
+    assert!(msg.is_some(), "Should receive echoed input hello_ws_input");
 }
 
 #[tokio::test]
@@ -322,7 +335,9 @@ async fn ws_cursor_reconnection() {
         .body(Body::empty())
         .unwrap();
     let (_status, info) = json_response(&app, req).await;
-    let cursor_offset = info["total_bytes"].as_u64().expect("should have total_bytes");
+    let cursor_offset = info["total_bytes"]
+        .as_u64()
+        .expect("should have total_bytes");
     assert!(cursor_offset > 0, "Should have some output by now");
 
     // Step 4: Write second output
@@ -367,9 +382,8 @@ async fn ws_cursor_reconnection() {
                                 // unless it was in the same chunk. first_cursor_data at offset 0
                                 // should not be in delta starting from cursor_offset.
                                 if text.contains("first_cursor_data") {
-                                    let msg_offset = val.get("offset")
-                                        .and_then(|o| o.as_u64())
-                                        .unwrap_or(0);
+                                    let msg_offset =
+                                        val.get("offset").and_then(|o| o.as_u64()).unwrap_or(0);
                                     if msg_offset < cursor_offset {
                                         found_first_in_delta = true;
                                     }
@@ -408,7 +422,11 @@ async fn ws_state_change_on_exit() {
     // Use sleep so session stays alive long enough for WS to connect, then exit
     let (id, _pid) = spawn_session(&app, "sleep 0.5 && exit 0").await;
 
-    let ws_url = format!("{}/api/v1/sessions/{}/ws", base_url.replace("http", "ws"), id);
+    let ws_url = format!(
+        "{}/api/v1/sessions/{}/ws",
+        base_url.replace("http", "ws"),
+        id
+    );
     let (_sink, mut stream) = ws_connect(&ws_url).await;
 
     // Should receive a "state" message with session_state containing "exited"
