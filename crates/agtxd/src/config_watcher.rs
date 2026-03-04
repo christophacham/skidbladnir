@@ -41,10 +41,8 @@ pub async fn watch_config(
             move |result: Result<notify::Event, notify::Error>| {
                 if let Ok(event) = result {
                     // Only trigger on write/create events for our config file
-                    let dominated = matches!(
-                        event.kind,
-                        EventKind::Modify(_) | EventKind::Create(_)
-                    );
+                    let dominated =
+                        matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_));
                     if !dominated {
                         return;
                     }

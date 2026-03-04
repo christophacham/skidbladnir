@@ -34,11 +34,9 @@ impl BoardState {
 
     /// Get the currently selected task (mutable)
     pub fn selected_task_mut(&mut self) -> Option<&mut Task> {
-        let status = TaskStatus::columns()
-            .get(self.selected_column)
-            .copied()?;
+        let status = TaskStatus::columns().get(self.selected_column).copied()?;
 
-        let mut matching_indices: Vec<usize> = self
+        let matching_indices: Vec<usize> = self
             .tasks
             .iter()
             .enumerate()
@@ -46,7 +44,9 @@ impl BoardState {
             .map(|(i, _)| i)
             .collect();
 
-        matching_indices.get(self.selected_row).and_then(|&idx| self.tasks.get_mut(idx))
+        matching_indices
+            .get(self.selected_row)
+            .and_then(|&idx| self.tasks.get_mut(idx))
     }
 
     /// Move selection left

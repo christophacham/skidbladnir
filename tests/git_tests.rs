@@ -43,7 +43,6 @@ fn test_worktree_exists_false_for_nonexistent() {
     assert!(!git::worktree_exists(temp_dir.path(), "nonexistent-task"));
 }
 
-
 // =============================================================================
 // Integration tests (require git)
 // =============================================================================
@@ -302,7 +301,6 @@ fn test_worktree_with_uncommitted_changes() {
     assert!(result.is_ok());
 }
 
-
 // =============================================================================
 // initialize_worktree tests
 // =============================================================================
@@ -379,13 +377,8 @@ fn test_initialize_worktree_init_script_failure() {
     let temp_dir = setup_git_repo();
     let worktree_path = git::create_worktree(temp_dir.path(), "init-script-fail").unwrap();
 
-    let warnings = git::initialize_worktree(
-        temp_dir.path(),
-        &worktree_path,
-        None,
-        Some("exit 1"),
-        &[],
-    );
+    let warnings =
+        git::initialize_worktree(temp_dir.path(), &worktree_path, None, Some("exit 1"), &[]);
     assert_eq!(warnings.len(), 1);
     assert!(warnings[0].contains("init_script"));
 }
@@ -439,13 +432,8 @@ fn test_initialize_worktree_empty_copy_files() {
     let temp_dir = setup_git_repo();
     let worktree_path = git::create_worktree(temp_dir.path(), "init-empty").unwrap();
 
-    let warnings = git::initialize_worktree(
-        temp_dir.path(),
-        &worktree_path,
-        Some(", , "),
-        None,
-        &[],
-    );
+    let warnings =
+        git::initialize_worktree(temp_dir.path(), &worktree_path, Some(", , "), None, &[]);
     assert!(warnings.is_empty());
 }
 
@@ -458,13 +446,8 @@ fn test_initialize_worktree_copy_directory_supported() {
 
     let worktree_path = git::create_worktree(temp_dir.path(), "init-dir").unwrap();
 
-    let warnings = git::initialize_worktree(
-        temp_dir.path(),
-        &worktree_path,
-        Some("config"),
-        None,
-        &[],
-    );
+    let warnings =
+        git::initialize_worktree(temp_dir.path(), &worktree_path, Some("config"), None, &[]);
     assert_eq!(warnings.len(), 0);
     // Directory and its contents should be copied
     assert!(worktree_path.join("config").join("app.toml").exists());

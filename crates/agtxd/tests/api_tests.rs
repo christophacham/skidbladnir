@@ -25,7 +25,12 @@ fn build_test_app(tmp_dir: &std::path::Path) -> axum::Router {
 async fn json_response(app: axum::Router, req: Request<Body>) -> (StatusCode, Value) {
     let response = app.oneshot(req).await.expect("request failed");
     let status = response.status();
-    let body = response.into_body().collect().await.expect("body").to_bytes();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
     (status, json)
 }
@@ -46,9 +51,15 @@ async fn test_health_returns_200_with_status_uptime_version() {
 
     assert_eq!(status, StatusCode::OK);
     assert_eq!(json["status"], "healthy");
-    assert!(json["uptime_secs"].is_number(), "uptime_secs should be a number");
+    assert!(
+        json["uptime_secs"].is_number(),
+        "uptime_secs should be a number"
+    );
     assert!(json["version"].is_string(), "version should be a string");
-    assert!(!json["version"].as_str().unwrap().is_empty(), "version should not be empty");
+    assert!(
+        !json["version"].as_str().unwrap().is_empty(),
+        "version should not be empty"
+    );
 }
 
 // === Task Endpoints ===

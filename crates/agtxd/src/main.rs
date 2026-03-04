@@ -20,8 +20,7 @@ async fn main() -> Result<()> {
     let log_dir = GlobalConfig::data_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("logs");
-    let (reload_handle, _guard) =
-        logging::init_logging(&log_dir, &config.daemon.log_level)?;
+    let (reload_handle, _guard) = logging::init_logging(&log_dir, &config.daemon.log_level)?;
 
     // Parse CLI args for optional --port and --bind overrides
     let args: Vec<String> = std::env::args().collect();
@@ -41,10 +40,7 @@ async fn main() -> Result<()> {
             }
             "--bind" => {
                 i += 1;
-                bind = args
-                    .get(i)
-                    .context("--bind requires a value")?
-                    .clone();
+                bind = args.get(i).context("--bind requires a value")?.clone();
             }
             _ => {}
         }

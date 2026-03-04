@@ -1,4 +1,4 @@
-use agtx::db::{Task, TaskStatus, Project};
+use agtx::db::{Project, Task, TaskStatus};
 
 // === TaskStatus Tests ===
 
@@ -13,13 +13,22 @@ fn test_task_status_as_str() {
 
 #[test]
 fn test_task_status_from_str() {
-    assert_eq!(TaskStatus::from_str("backlog"), Some(TaskStatus::Backlog));
-    assert_eq!(TaskStatus::from_str("planning"), Some(TaskStatus::Planning));
-    assert_eq!(TaskStatus::from_str("running"), Some(TaskStatus::Running));
-    assert_eq!(TaskStatus::from_str("review"), Some(TaskStatus::Review));
-    assert_eq!(TaskStatus::from_str("done"), Some(TaskStatus::Done));
-    assert_eq!(TaskStatus::from_str("invalid"), None);
-    assert_eq!(TaskStatus::from_str(""), None);
+    assert_eq!(
+        TaskStatus::parse_status("backlog"),
+        Some(TaskStatus::Backlog)
+    );
+    assert_eq!(
+        TaskStatus::parse_status("planning"),
+        Some(TaskStatus::Planning)
+    );
+    assert_eq!(
+        TaskStatus::parse_status("running"),
+        Some(TaskStatus::Running)
+    );
+    assert_eq!(TaskStatus::parse_status("review"), Some(TaskStatus::Review));
+    assert_eq!(TaskStatus::parse_status("done"), Some(TaskStatus::Done));
+    assert_eq!(TaskStatus::parse_status("invalid"), None);
+    assert_eq!(TaskStatus::parse_status(""), None);
 }
 
 #[test]
@@ -37,7 +46,7 @@ fn test_task_status_columns() {
 fn test_task_status_roundtrip() {
     for status in TaskStatus::columns() {
         let s = status.as_str();
-        let parsed = TaskStatus::from_str(s);
+        let parsed = TaskStatus::parse_status(s);
         assert_eq!(parsed, Some(*status));
     }
 }

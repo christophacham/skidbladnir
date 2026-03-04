@@ -1,7 +1,6 @@
 /// Default skill content for agtx phases.
 /// Skills follow the Agent Skills spec (SKILL.md with YAML frontmatter + markdown).
 /// Content is loaded from .md files at compile time via include_str!().
-
 pub const RESEARCH_SKILL: &str = include_str!("../../../plugins/agtx/skills/research.md");
 pub const PLAN_SKILL: &str = include_str!("../../../plugins/agtx/skills/plan.md");
 pub const EXECUTE_SKILL: &str = include_str!("../../../plugins/agtx/skills/execute.md");
@@ -57,7 +56,9 @@ pub fn skill_name_to_command(skill_name: &str) -> String {
 pub fn skill_dir_to_filename(skill_dir_name: &str, agent_name: &str) -> String {
     match agent_name {
         "gemini" => {
-            let short = skill_dir_name.strip_prefix("agtx-").unwrap_or(skill_dir_name);
+            let short = skill_dir_name
+                .strip_prefix("agtx-")
+                .unwrap_or(skill_dir_name);
             format!("{}.toml", short)
         }
         "opencode" => {
@@ -65,7 +66,9 @@ pub fn skill_dir_to_filename(skill_dir_name: &str, agent_name: &str) -> String {
             format!("{}.md", skill_dir_name)
         }
         _ => {
-            let short = skill_dir_name.strip_prefix("agtx-").unwrap_or(skill_dir_name);
+            let short = skill_dir_name
+                .strip_prefix("agtx-")
+                .unwrap_or(skill_dir_name);
             format!("{}.md", short)
         }
     }
@@ -103,9 +106,9 @@ pub fn transform_plugin_command(canonical_cmd: &str, agent_name: &str) -> Option
 
 /// Strip YAML frontmatter from a skill file, returning just the body content.
 pub fn strip_frontmatter(content: &str) -> &str {
-    if content.starts_with("---") {
-        if let Some(end) = content[3..].find("---") {
-            let after = &content[3 + end + 3..];
+    if let Some(stripped) = content.strip_prefix("---") {
+        if let Some(end) = stripped.find("---") {
+            let after = &stripped[end + 3..];
             return after.trim_start_matches('\n');
         }
     }
@@ -152,9 +155,9 @@ pub const BUNDLED_PLUGINS: &[(&str, &str, &str)] = &[
 
 /// Extract the description from YAML frontmatter.
 pub fn extract_description(content: &str) -> Option<String> {
-    if content.starts_with("---") {
-        if let Some(end) = content[3..].find("---") {
-            let frontmatter = &content[3..3 + end];
+    if let Some(stripped) = content.strip_prefix("---") {
+        if let Some(end) = stripped.find("---") {
+            let frontmatter = &stripped[..end];
             for line in frontmatter.lines() {
                 if let Some(desc) = line.strip_prefix("description:") {
                     return Some(desc.trim().to_string());
@@ -198,7 +201,10 @@ fn extract_description_from_toml(path: &std::path::Path) -> Option<String> {
 
 /// Scan the active agent's native command directory for available skills.
 /// Returns `(command, description)` tuples in agent-native invocation format.
-pub fn scan_agent_skills(agent_name: &str, project_path: &std::path::Path) -> Vec<(String, String)> {
+pub fn scan_agent_skills(
+    agent_name: &str,
+    project_path: &std::path::Path,
+) -> Vec<(String, String)> {
     let mut results = Vec::new();
 
     match agent_name {

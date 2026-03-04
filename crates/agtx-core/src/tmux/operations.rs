@@ -144,7 +144,7 @@ impl TmuxOperations for RealTmuxOps {
 
         if output.status.success() {
             let output_str = String::from_utf8_lossy(&output.stdout);
-            let parts: Vec<&str> = output_str.trim().split_whitespace().collect();
+            let parts: Vec<&str> = output_str.split_whitespace().collect();
             if parts.len() == 2 {
                 let cursor_y: usize = parts[0].parse().ok()?;
                 let pane_height: usize = parts[1].parse().ok()?;
@@ -172,7 +172,11 @@ impl TmuxOperations for RealTmuxOps {
             .ok()?;
         if output.status.success() {
             let cmd = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !cmd.is_empty() { Some(cmd) } else { None }
+            if !cmd.is_empty() {
+                Some(cmd)
+            } else {
+                None
+            }
         } else {
             None
         }

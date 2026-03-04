@@ -185,9 +185,7 @@ pub fn trim_trailing_empty_lines(lines: &[&str]) -> usize {
     }
 
     // Find the last non-empty line
-    let last_content_line = lines
-        .iter()
-        .rposition(|line| !line.trim().is_empty());
+    let last_content_line = lines.iter().rposition(|line| !line.trim().is_empty());
 
     match last_content_line {
         Some(idx) => {
@@ -275,7 +273,11 @@ pub fn render_shell_popup(
 
     // Footer with scroll indicator (pad to fill width)
     let footer_text = build_footer_text(popup.scroll_offset, start_line);
-    let padded_footer = format!("{:<width$}", footer_text, width = popup_chunks[2].width as usize);
+    let padded_footer = format!(
+        "{:<width$}",
+        footer_text,
+        width = popup_chunks[2].width as usize
+    );
     let footer = Paragraph::new(padded_footer)
         .style(Style::default().fg(colors.footer_fg).bg(colors.footer_bg));
     frame.render_widget(footer, popup_chunks[2]);

@@ -121,7 +121,10 @@ pub fn initialize_worktree(
 
             if src.is_dir() {
                 if let Err(e) = copy_dir_recursive(&src, &dst) {
-                    warnings.push(format!("Failed to copy directory '{}' to worktree: {}", file_name, e));
+                    warnings.push(format!(
+                        "Failed to copy directory '{}' to worktree: {}",
+                        file_name, e
+                    ));
                 }
             } else {
                 if let Some(parent) = dst.parent() {
@@ -145,7 +148,12 @@ pub fn initialize_worktree(
     if let Some(script) = init_script {
         let script = script.trim();
         if !script.is_empty() {
-            match Command::new("sh").arg("-c").arg(script).current_dir(worktree_path).output() {
+            match Command::new("sh")
+                .arg("-c")
+                .arg(script)
+                .current_dir(worktree_path)
+                .output()
+            {
                 Ok(result) => {
                     if !result.status.success() {
                         let stderr = String::from_utf8_lossy(&result.stderr);

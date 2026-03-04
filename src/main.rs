@@ -1,4 +1,8 @@
-use agtx::{agent, config::{self, GlobalConfig}, git, tui, AppMode};
+use agtx::{
+    agent,
+    config::{self, GlobalConfig},
+    git, tui, AppMode,
+};
 use anyhow::Result;
 use crossterm::{
     cursor,
@@ -50,8 +54,10 @@ async fn main() -> Result<()> {
             let available = agent::detect_available_agents();
             if !available.is_empty() {
                 let selected = prompt_agent_selection(&available)?;
-                let mut cfg = GlobalConfig::default();
-                cfg.default_agent = selected.name.clone();
+                let cfg = GlobalConfig {
+                    default_agent: selected.name.clone(),
+                    ..Default::default()
+                };
                 cfg.save()?;
             }
         }
@@ -96,18 +102,30 @@ fn prompt_agent_selection(agents: &[agent::Agent]) -> Result<&agent::Agent> {
     stdout.execute(cursor::Hide)?;
 
     // Print ASCII art banner
-    let gold = style::Color::Rgb { r: 234, g: 212, b: 154 }; // #ead49a
+    let gold = style::Color::Rgb {
+        r: 234,
+        g: 212,
+        b: 154,
+    }; // #ead49a
     let banner: &[(&str, &str)] = &[
         (" █████╗  ██████╗████████╗██╗  ██╗", ""),
         ("██╔══██╗██╔════╝╚══██╔══╝╚██╗██╔╝", ""),
-        ("███████║██║  ███╗  ██║    ╚███╔╝ ", "  Autonomous multi-session spec-driven"),
-        ("██╔══██║██║   ██║  ██║    ██╔██╗ ", "  AI coding orchestration in the terminal"),
+        (
+            "███████║██║  ███╗  ██║    ╚███╔╝ ",
+            "  Autonomous multi-session spec-driven",
+        ),
+        (
+            "██╔══██║██║   ██║  ██║    ██╔██╗ ",
+            "  AI coding orchestration in the terminal",
+        ),
         ("██║  ██║╚██████╔╝  ██║   ██╔╝ ██╗", ""),
         ("╚═╝  ╚═╝ ╚═════╝   ╚═╝   ╚═╝  ╚═╝", ""),
     ];
     stdout.execute(style::Print("\r\n"))?;
     for (art, tagline) in banner {
-        stdout.execute(style::PrintStyledContent(style::style(format!("  {}", art)).with(gold)))?;
+        stdout.execute(style::PrintStyledContent(
+            style::style(format!("  {}", art)).with(gold),
+        ))?;
         if !tagline.is_empty() {
             stdout.execute(style::PrintStyledContent((*tagline).dark_grey()))?;
         }
@@ -115,7 +133,9 @@ fn prompt_agent_selection(agents: &[agent::Agent]) -> Result<&agent::Agent> {
     }
     stdout.execute(style::Print("\r\n"))?;
     stdout.execute(style::Print("  Select your default coding agent "))?;
-    stdout.execute(style::PrintStyledContent("(can be changed later via config)\r\n\r\n".dark_grey()))?;
+    stdout.execute(style::PrintStyledContent(
+        "(can be changed later via config)\r\n\r\n".dark_grey(),
+    ))?;
 
     // Draw the list
     let draw = |stdout: &mut io::Stdout, selected: usize| -> Result<()> {
@@ -145,9 +165,7 @@ fn prompt_agent_selection(agents: &[agent::Agent]) -> Result<&agent::Agent> {
         if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Up | KeyCode::Char('k') => {
-                    if selected > 0 {
-                        selected -= 1;
-                    }
+                    selected = selected.saturating_sub(1);
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     if selected < agents.len() - 1 {
@@ -158,9 +176,7 @@ fn prompt_agent_selection(agents: &[agent::Agent]) -> Result<&agent::Agent> {
                 KeyCode::Esc | KeyCode::Char('q') => {
                     break Err(anyhow::anyhow!("Selection cancelled"));
                 }
-                KeyCode::Char('c')
-                    if key.modifiers.contains(event::KeyModifiers::CONTROL) =>
-                {
+                KeyCode::Char('c') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
                     break Err(anyhow::anyhow!("Selection cancelled"));
                 }
                 _ => continue,

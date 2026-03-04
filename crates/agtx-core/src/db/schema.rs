@@ -118,11 +118,22 @@ impl Database {
         )?;
 
         // Migration: add new columns if they don't exist
-        let _ = self.conn.execute("ALTER TABLE tasks ADD COLUMN branch_name TEXT", []);
-        let _ = self.conn.execute("ALTER TABLE tasks ADD COLUMN pr_number INTEGER", []);
-        let _ = self.conn.execute("ALTER TABLE tasks ADD COLUMN pr_url TEXT", []);
-        let _ = self.conn.execute("ALTER TABLE tasks ADD COLUMN plugin TEXT", []);
-        let _ = self.conn.execute("ALTER TABLE tasks ADD COLUMN cycle INTEGER NOT NULL DEFAULT 1", []);
+        let _ = self
+            .conn
+            .execute("ALTER TABLE tasks ADD COLUMN branch_name TEXT", []);
+        let _ = self
+            .conn
+            .execute("ALTER TABLE tasks ADD COLUMN pr_number INTEGER", []);
+        let _ = self
+            .conn
+            .execute("ALTER TABLE tasks ADD COLUMN pr_url TEXT", []);
+        let _ = self
+            .conn
+            .execute("ALTER TABLE tasks ADD COLUMN plugin TEXT", []);
+        let _ = self.conn.execute(
+            "ALTER TABLE tasks ADD COLUMN cycle INTEGER NOT NULL DEFAULT 1",
+            [],
+        );
 
         Ok(())
     }
@@ -232,7 +243,7 @@ impl Database {
             id: row.get("id")?,
             title: row.get("title")?,
             description: row.get("description")?,
-            status: TaskStatus::from_str(&row.get::<_, String>("status")?)
+            status: TaskStatus::parse_status(&row.get::<_, String>("status")?)
                 .unwrap_or(TaskStatus::Backlog),
             agent: row.get("agent")?,
             project_id: row.get("project_id")?,
@@ -253,13 +264,9 @@ impl Database {
     }
 
     pub fn get_task(&self, task_id: &str) -> Result<Option<Task>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT * FROM tasks WHERE id = ?1")?;
+        let mut stmt = self.conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
 
-        let task = stmt
-            .query_row(params![task_id], Self::task_from_row)
-            .ok();
+        let task = stmt.query_row(params![task_id], Self::task_from_row).ok();
 
         Ok(task)
     }

@@ -113,7 +113,7 @@ async fn update_task(
             task.description = Some(description);
         }
         if let Some(status_str) = req.status {
-            if let Some(status) = TaskStatus::from_str(&status_str) {
+            if let Some(status) = TaskStatus::parse_status(&status_str) {
                 task.status = status;
             }
         }

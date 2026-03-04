@@ -71,10 +71,14 @@ impl GitProviderOperations for RealGitHubOps {
         let output = std::process::Command::new("gh")
             .current_dir(project_path)
             .args([
-                "pr", "create",
-                "--title", title,
-                "--body", body,
-                "--head", head_branch,
+                "pr",
+                "create",
+                "--title",
+                title,
+                "--body",
+                body,
+                "--head",
+                head_branch,
             ])
             .output()?;
 
@@ -88,7 +92,7 @@ impl GitProviderOperations for RealGitHubOps {
         // Extract PR number from URL (e.g., https://github.com/owner/repo/pull/123)
         let pr_number = pr_url
             .split('/')
-            .last()
+            .next_back()
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(0);
 
