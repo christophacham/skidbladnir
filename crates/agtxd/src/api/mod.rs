@@ -1,5 +1,6 @@
 pub mod health;
 pub mod projects;
+pub mod sessions;
 pub mod tasks;
 
 use axum::routing::get;
@@ -13,4 +14,5 @@ pub fn api_router() -> Router<AppState> {
         .route("/health", get(health::handler))
         .nest("/api/v1/tasks", tasks::router())
         .nest("/api/v1/projects", projects::router())
+        .nest("/api/v1/sessions", sessions::router())
 }

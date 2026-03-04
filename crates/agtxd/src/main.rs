@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use tokio::net::TcpListener;
@@ -8,6 +9,7 @@ use agtx_core::db::Database;
 use agtxd::api;
 use agtxd::config_watcher;
 use agtxd::logging;
+use agtxd::session::SessionManager;
 use agtxd::shutdown;
 use agtxd::state::AppState;
 
@@ -62,8 +64,13 @@ async fn main() -> Result<()> {
     Database::open_at(&db_path).context("Failed to initialize project database")?;
     Database::open_global_at(&global_db_path).context("Failed to initialize global database")?;
 
+    // Create session manager for PTY process lifecycle
+    let sessions_dir = data_dir.join("sessions");
+    let session_manager = Arc::new(SessionManager::new(sessions_dir));
+    let session_manager_for_shutdown = session_manager.clone();
+
     // Build application state and router
-    let state = AppState::new(db_path, global_db_path, config);
+    let state = AppState::new(db_path, global_db_path, config, session_manager);
 
     // Spawn config file watcher as background task
     if let Ok(config_path) = GlobalConfig::config_path() {
@@ -89,6 +96,10 @@ async fn main() -> Result<()> {
         .with_graceful_shutdown(shutdown::shutdown_signal())
         .await
         .context("Server error")?;
+
+    // Clean up all active sessions after server stops
+    tracing::info!("Shutting down active sessions...");
+    session_manager_for_shutdown.shutdown_all().await;
 
     tracing::info!("agtxd shut down cleanly");
     Ok(())

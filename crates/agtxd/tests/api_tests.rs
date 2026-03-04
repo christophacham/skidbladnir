@@ -13,10 +13,14 @@ fn build_test_app(tmp_dir: &std::path::Path) -> axum::Router {
     agtx_core::db::Database::open_at(&db_path).expect("project db");
     agtx_core::db::Database::open_global_at(&global_db_path).expect("global db");
 
+    let sessions_dir = tmp_dir.join("sessions");
+    let session_manager = std::sync::Arc::new(agtxd::session::SessionManager::new(sessions_dir));
+
     let state = agtxd::state::AppState::new(
         db_path,
         global_db_path,
         agtx_core::config::GlobalConfig::default(),
+        session_manager,
     );
     agtxd::api::api_router().with_state(state)
 }
