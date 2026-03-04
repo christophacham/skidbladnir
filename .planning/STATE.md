@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
+stopped_at: Completed 03-01-PLAN.md
 last_updated: "2026-03-04T10:03:33.054Z"
-last_activity: 2026-03-04 -- Completed Plan 02-03 (Resource monitoring and metrics)
+last_activity: 2026-03-04 -- Completed Plan 03-01 (WS infrastructure and broadcast)
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 22
+  total_plans: 6
+  completed_plans: 6
+  percent: 26
 ---
 
 # Project State
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-03-04)
 
 ## Current Position
 
-Phase: 2 of 10 (PTY Process Management) -- COMPLETE
-Plan: 3 of 3 in current phase (all done)
+Phase: 3 of 10 (WebSocket Streaming)
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 02-03 (Resource monitoring and metrics)
+Last activity: 2026-03-04 -- Completed Plan 03-01 (WS infrastructure and broadcast)
 
-Progress: [██░░░░░░░░] 22%
+Progress: [██░░░░░░░░] 26%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 9min
-- Total execution time: 0.70 hours
+- Total plans completed: 6
+- Average duration: 8min
+- Total execution time: 0.78 hours
 
 **By Phase:**
 
@@ -45,9 +45,10 @@ Progress: [██░░░░░░░░] 22%
 |-------|-------|-------|----------|
 | 01-daemon-foundation | 2 | 14min | 7min |
 | 02-pty-process-management | 3 | 28min | 9min |
+| 03-websocket-streaming | 1 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 8min, 6min, 12min, 8min, 8min
+- Last 5 plans: 6min, 12min, 8min, 8min, 5min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -81,6 +82,11 @@ Recent decisions affecting current work:
 - 02-03: Delta CPU% calculation (prev_ticks / wall_ticks ratio, not cumulative)
 - 02-03: Arc<RwLock<Option<MetricsSnapshot>>> cache shared between polling task and SessionHandle
 - 02-03: Clone Arc before dropping sessions lock to avoid nested async borrow conflicts
+- 03-01: broadcast::channel(256) capacity for OutputEvent fan-out to WebSocket subscribers
+- 03-01: OutputEvent::Data carries bytes + offset for client cursor tracking
+- 03-01: read_range is static method on SessionOutput (no instance/lock needed)
+- 03-01: Replaced hand-rolled base64_encode with base64 crate standard engine
+- 03-01: Output endpoint uses ring buffer when offset absent/0, log file when offset > 0
 
 ### Pending Todos
 
@@ -94,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T10:03:33.052Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-websocket-streaming/03-CONTEXT.md
+Last session: 2026-03-04T10:23:55Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: .planning/phases/03-websocket-streaming/03-01-SUMMARY.md

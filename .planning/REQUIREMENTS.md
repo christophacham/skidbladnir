@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Daemon & Infrastructure
 
 - [x] **INFRA-01**: Daemon serves REST API endpoints for task and project CRUD via axum
-- [ ] **INFRA-02**: Daemon serves WebSocket endpoint for bidirectional real-time streaming
+- [x] **INFRA-02**: Daemon serves WebSocket endpoint for bidirectional real-time streaming
 - [x] **INFRA-03**: Structured logging with tracing + tracing-appender (rotation, non-blocking writes)
 - [x] **INFRA-04**: Health check endpoint returns daemon status
 - [x] **INFRA-05**: Daemon handles graceful shutdown on SIGTERM/SIGINT with active process cleanup
@@ -28,8 +28,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### WebSocket & Sessions
 
-- [ ] **WS-01**: Browser receives live agent output via WebSocket as it is produced
-- [ ] **WS-02**: Daemon persists session output to disk as PTY bytes arrive
+- [x] **WS-01**: Browser receives live agent output via WebSocket as it is produced
+- [x] **WS-02**: Daemon persists session output to disk as PTY bytes arrive
 - [ ] **WS-03**: User reconnects and sees full history via lazy-loaded virtualized scrollback
 - [ ] **WS-04**: User sees connection status indicator (connected/disconnected/reconnecting)
 - [ ] **WS-05**: Output auto-scrolls to bottom; pauses on manual scroll-up with "jump to bottom" button
@@ -136,7 +136,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 1: Daemon Foundation | Complete |
-| INFRA-02 | Phase 3: WebSocket Streaming | Pending |
+| INFRA-02 | Phase 3: WebSocket Streaming | Complete |
 | INFRA-03 | Phase 1: Daemon Foundation | Complete |
 | INFRA-04 | Phase 1: Daemon Foundation | Complete |
 | INFRA-05 | Phase 1: Daemon Foundation | Complete |
@@ -148,8 +148,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PTY-05 | Phase 2: PTY Process Management | Complete |
 | PTY-06 | Phase 2: PTY Process Management | Complete |
 | PTY-07 | Phase 2: PTY Process Management | Complete |
-| WS-01 | Phase 3: WebSocket Streaming | Pending |
-| WS-02 | Phase 3: WebSocket Streaming | Pending |
+| WS-01 | Phase 3: WebSocket Streaming | Complete |
+| WS-02 | Phase 3: WebSocket Streaming | Complete |
 | WS-03 | Phase 3: WebSocket Streaming | Pending |
 | WS-04 | Phase 3: WebSocket Streaming | Pending |
 | WS-05 | Phase 3: WebSocket Streaming | Pending |

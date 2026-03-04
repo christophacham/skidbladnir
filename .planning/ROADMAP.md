@@ -68,7 +68,7 @@ Plans:
   3. Reconnecting client loads full history via lazy-loaded virtualized scrollback
   4. Connection status indicator shows connected, disconnected, and reconnecting states
   5. Output auto-scrolls to bottom during live streaming and pauses when user scrolls up with a "jump to bottom" button
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Broadcast channel infrastructure, WS message types, output read_range, write_raw, offset/limit on output endpoint
@@ -194,7 +194,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 |-------|----------------|--------|-----------|
 | 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
 | 2. PTY Process Management | 3/3 | Complete   | 2026-03-04 |
-| 3. WebSocket Streaming | 0/2 | Not started | - |
+| 3. WebSocket Streaming | 1/2 | In Progress|  |
 | 4. Frontend Kanban Board | 0/2 | Not started | - |
 | 5. Task Detail & Live Output | 0/2 | Not started | - |
 | 6. Workflow Engine | 0/3 | Not started | - |
