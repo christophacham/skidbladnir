@@ -1,7 +1,9 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
+use tokio::sync::RwLock;
 
 /// Snapshot of process resource usage at a point in time.
 #[derive(Debug, Clone, Serialize)]
@@ -89,5 +91,24 @@ impl MetricsCollector {
             rss_bytes,
             uptime_secs,
         })
+    }
+}
+
+/// Background task that polls /proc every 5 seconds and caches the latest metrics.
+///
+/// Exits when the process disappears or /proc becomes inaccessible.
+pub async fn metrics_polling_task(
+    pid: u32,
+    session_start: Instant,
+    metrics_cache: Arc<RwLock<Option<MetricsSnapshot>>>,
+) {
+    let mut collector = MetricsCollector::new(pid, session_start);
+
+    // Initial delay to let the process start and settle
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    while let Some(snapshot) = collector.collect() {
+        *metrics_cache.write().await = Some(snapshot);
+        tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }

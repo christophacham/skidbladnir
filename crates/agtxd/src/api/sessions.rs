@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::AppError;
-use crate::session::{SessionInfo, SpawnRequest};
+use crate::session::{MetricsSnapshot, SessionInfo, SpawnRequest};
 use crate::state::AppState;
 
 /// Request body for creating a new session.
@@ -64,6 +64,7 @@ pub fn router() -> Router<AppState> {
         .route("/{id}/interrupt", post(interrupt_session))
         .route("/{id}/kill", post(kill_session_process))
         .route("/{id}/output", get(get_session_output))
+        .route("/{id}/metrics", get(get_session_metrics))
 }
 
 /// Parse a UUID from a path parameter, returning 400 on invalid UUID.
@@ -264,4 +265,18 @@ async fn get_session_output(
         data: encoded,
         total_bytes: info.total_bytes,
     }))
+}
+
+/// GET /api/v1/sessions/{id}/metrics - Get session resource metrics
+async fn get_session_metrics(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<MetricsSnapshot>, AppError> {
+    let uuid = parse_uuid(&id)?;
+    match state.session_manager.get_metrics(uuid).await {
+        Some(metrics) => Ok(Json(metrics)),
+        None => Err(AppError::NotFound(
+            "Session metrics not available".to_string(),
+        )),
+    }
 }

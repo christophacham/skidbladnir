@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Context;
 use chrono::Utc;
@@ -9,6 +10,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
+use super::metrics::{metrics_polling_task, MetricsSnapshot};
 use super::output::SessionOutput;
 use super::types::{SessionHandle, SessionInfo, SessionState, SpawnRequest};
 
@@ -86,6 +88,15 @@ impl SessionManager {
         let reader_id = id;
         let reader_handle = tokio::spawn(reader_task(read_pty, reader_output, reader_id));
 
+        // Start metrics polling task
+        let session_start = Instant::now();
+        let metrics_cache: Arc<RwLock<Option<MetricsSnapshot>>> = Arc::new(RwLock::new(None));
+        let metrics_handle = tokio::spawn(metrics_polling_task(
+            pid,
+            session_start,
+            metrics_cache.clone(),
+        ));
+
         // Create session handle
         let handle = SessionHandle {
             id,
@@ -96,6 +107,8 @@ impl SessionManager {
             output,
             reader_handle,
             created_at: Utc::now(),
+            metrics: metrics_cache,
+            metrics_handle: Some(metrics_handle),
         };
 
         // Insert into sessions map
@@ -147,35 +160,50 @@ impl SessionManager {
         Ok(())
     }
 
-    /// Get session info by ID.
+    /// Get session info by ID, including latest metrics snapshot.
     pub async fn get(&self, id: Uuid) -> Option<SessionInfo> {
         let sessions = self.sessions.read().await;
         let handle = sessions.get(&id)?;
         let total_bytes = handle.output.read().await.total_bytes();
+        let metrics = handle.metrics.read().await.clone();
         Some(SessionInfo {
             id: handle.id,
             pid: handle.pid,
             state: handle.state,
             created_at: handle.created_at,
             total_bytes,
+            metrics,
         })
     }
 
-    /// List all active sessions.
+    /// List all active sessions with latest metrics.
     pub async fn list(&self) -> Vec<SessionInfo> {
         let sessions = self.sessions.read().await;
         let mut infos = Vec::with_capacity(sessions.len());
         for handle in sessions.values() {
             let total_bytes = handle.output.read().await.total_bytes();
+            let metrics = handle.metrics.read().await.clone();
             infos.push(SessionInfo {
                 id: handle.id,
                 pid: handle.pid,
                 state: handle.state,
                 created_at: handle.created_at,
                 total_bytes,
+                metrics,
             });
         }
         infos
+    }
+
+    /// Get the latest metrics snapshot for a session.
+    pub async fn get_metrics(&self, id: Uuid) -> Option<MetricsSnapshot> {
+        let metrics_arc = {
+            let sessions = self.sessions.read().await;
+            let handle = sessions.get(&id)?;
+            handle.metrics.clone()
+        };
+        let guard = metrics_arc.read().await;
+        guard.clone()
     }
 
     /// Get the output ring buffer contents for a session.
@@ -210,6 +238,11 @@ impl SessionManager {
         // Abort the reader task
         handle.reader_handle.abort();
 
+        // Abort the metrics polling task
+        if let Some(metrics_handle) = handle.metrics_handle.take() {
+            metrics_handle.abort();
+        }
+
         tracing::info!(session_id = %id, pid = handle.pid, "Session killed");
 
         Ok(())
@@ -226,6 +259,9 @@ impl SessionManager {
             }
             let _ = handle.child.wait().await;
             handle.reader_handle.abort();
+            if let Some(metrics_handle) = handle.metrics_handle.take() {
+                metrics_handle.abort();
+            }
         }
     }
 }

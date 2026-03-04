@@ -1,6 +1,9 @@
+use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 use agtxd::session::metrics::{MetricsCollector, MetricsSnapshot};
+use agtxd::session::{SessionManager, SpawnRequest};
 
 /// Test 1: read_metrics for current process returns Some with non-zero rss_bytes
 #[test]
@@ -108,4 +111,55 @@ fn test_metrics_snapshot_serialization() {
     assert_eq!(parsed["cpu_percent"].as_f64().unwrap(), 42.5);
     assert_eq!(parsed["rss_bytes"].as_u64().unwrap(), 1024 * 1024);
     assert!((parsed["uptime_secs"].as_f64().unwrap() - 123.456).abs() < 0.001);
+}
+
+/// Test 6: Integration test -- metrics are available after the 5-second polling interval.
+///
+/// This test takes ~7 seconds: 1s initial delay + 5s poll interval + 1s safety margin.
+#[tokio::test]
+async fn test_session_metrics_available_after_poll() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let sessions_dir = tmp.path().join("sessions");
+    let manager = Arc::new(SessionManager::new(sessions_dir));
+
+    // Spawn a simple long-running process
+    let id = manager
+        .spawn(SpawnRequest {
+            command: "sh".to_string(),
+            args: vec![
+                "-c".to_string(),
+                "while true; do echo a; sleep 1; done".to_string(),
+            ],
+            working_dir: PathBuf::from("/tmp"),
+            env: vec![],
+            cols: 80,
+            rows: 24,
+        })
+        .await
+        .expect("spawn session");
+
+    // Wait for at least one metrics poll (1s initial delay + 5s interval + margin)
+    tokio::time::sleep(std::time::Duration::from_secs(7)).await;
+
+    // Metrics should be available
+    let metrics = manager.get_metrics(id).await;
+    assert!(
+        metrics.is_some(),
+        "Expected Some(MetricsSnapshot) after polling interval"
+    );
+
+    let snapshot = metrics.unwrap();
+    assert!(
+        snapshot.rss_bytes > 0,
+        "Expected non-zero RSS, got {}",
+        snapshot.rss_bytes
+    );
+    assert!(
+        snapshot.uptime_secs >= 6.0,
+        "Expected uptime >= 6s, got {}",
+        snapshot.uptime_secs
+    );
+
+    // Clean up
+    manager.kill(id).await.expect("kill session");
 }

@@ -9,6 +9,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
+use super::metrics::MetricsSnapshot;
 use super::output::SessionOutput;
 
 /// State of a PTY session in its lifecycle.
@@ -75,6 +76,9 @@ pub struct SessionInfo {
     pub created_at: DateTime<Utc>,
     /// Total bytes of output captured.
     pub total_bytes: u64,
+    /// Latest resource metrics (None if not yet collected).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<MetricsSnapshot>,
 }
 
 /// Internal session handle (not serializable).
@@ -96,4 +100,8 @@ pub struct SessionHandle {
     pub reader_handle: JoinHandle<()>,
     /// When the session was created.
     pub created_at: DateTime<Utc>,
+    /// Latest cached metrics snapshot (updated by polling task).
+    pub metrics: Arc<RwLock<Option<MetricsSnapshot>>>,
+    /// Handle to the metrics polling task (aborted on session kill).
+    pub metrics_handle: Option<JoinHandle<()>>,
 }
