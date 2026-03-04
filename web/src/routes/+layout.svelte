@@ -23,6 +23,26 @@
 			return;
 		}
 
+		if (e.key === 'Escape') {
+			// Priority: modals/command palette > detail panel > search clear
+			if (uiStore.commandPaletteOpen) {
+				uiStore.commandPaletteOpen = false;
+				return;
+			}
+			if (uiStore.createModalOpen) {
+				uiStore.closeCreateModal();
+				return;
+			}
+			if (uiStore.deleteTarget) {
+				uiStore.closeDeleteConfirm();
+				return;
+			}
+			if (uiStore.selectedTask) {
+				uiStore.closeDetail();
+				return;
+			}
+		}
+
 		if (isInput) return;
 
 		switch (e.key) {

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Task } from '$lib/types';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import { wsStore } from '$lib/stores/websocket.svelte';
+	import StatusDot from './StatusDot.svelte';
 
 	let {
 		task,
@@ -24,8 +26,11 @@
 		agentColors[task.agent.toLowerCase()] ?? 'bg-gray-500/20 text-gray-300'
 	);
 
-	// Phase 5: replace with live PhaseStatus from WebSocket
-	const statusDotColor = 'bg-gray-500';
+	const phaseStatus = $derived(
+		task.session_id ? (wsStore.phaseStatuses.get(task.session_id) ?? null) : null
+	);
+
+	const isSelected = $derived(uiStore.selectedTask?.id === task.id);
 
 	function handleDelete(e: MouseEvent) {
 		e.stopPropagation();
@@ -36,7 +41,7 @@
 <button
 	class="group w-full text-left rounded-lg p-3 cursor-pointer transition-opacity duration-150 relative"
 	class:opacity-30={dimmed}
-	style="background-color: var(--color-surface); border: 1px solid var(--color-border);"
+	style="background-color: var(--color-surface); border: 1px solid {isSelected ? 'var(--color-accent)' : 'var(--color-border)'}; {isSelected ? 'border-left: 3px solid var(--color-accent);' : ''}"
 	onmouseenter={(e) => {
 		(e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-surface-hover)';
 	}}
@@ -66,10 +71,9 @@
 		>
 			{task.title}
 		</span>
-		<span
-			class="w-2 h-2 rounded-full shrink-0 mt-1.5 {statusDotColor}"
-			title="Phase status"
-		></span>
+		<span class="shrink-0 mt-1.5">
+			<StatusDot status={phaseStatus} />
+		</span>
 	</div>
 
 	<!-- Row 2: Agent badge -->

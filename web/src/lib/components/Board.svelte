@@ -25,6 +25,7 @@
 			matchingIds={taskStore.matchingIds}
 			{searchActive}
 			ontoggle={() => uiStore.toggleColumn(status)}
+			ontaskclick={(task) => uiStore.selectTask(task)}
 		/>
 	{/each}
 </div>

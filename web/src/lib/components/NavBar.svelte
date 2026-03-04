@@ -2,8 +2,18 @@
 	import { projectStore } from '$lib/stores/projects.svelte';
 	import { taskStore } from '$lib/stores/tasks.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte';
+	import { wsStore } from '$lib/stores/websocket.svelte';
 
 	let searchInput = $state<HTMLInputElement | null>(null);
+
+	const connectionDotColor = $derived.by(() => {
+		switch (wsStore.connectionStatus) {
+			case 'connected': return '#4ade80';
+			case 'reconnecting': return '#fb923c';
+			case 'disconnected': return '#ef4444';
+			default: return '#ef4444';
+		}
+	});
 
 	const searchActive = $derived(taskStore.searchQuery.trim().length > 0);
 	const matchCount = $derived(taskStore.matchingIds.size);
@@ -35,7 +45,7 @@
 	class="flex items-center justify-between px-4 shrink-0"
 	style="height: 48px; border-bottom: 1px solid var(--color-border);"
 >
-	<!-- Left: Project name -->
+	<!-- Left: Project name + connection status -->
 	<div class="flex items-center gap-2">
 		<span
 			class="text-base font-bold tracking-wide"
@@ -43,6 +53,13 @@
 		>
 			{projectStore.active?.name ?? 'AGTX'}
 		</span>
+		{#if wsStore.activeSessionId !== null}
+			<span
+				class="w-1.5 h-1.5 rounded-full shrink-0"
+				style="background-color: {connectionDotColor};"
+				title={wsStore.connectionStatus}
+			></span>
+		{/if}
 	</div>
 
 	<!-- Center: Search -->

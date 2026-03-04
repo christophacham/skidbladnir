@@ -10,7 +10,8 @@
 		collapsed,
 		matchingIds,
 		searchActive,
-		ontoggle
+		ontoggle,
+		ontaskclick
 	}: {
 		status: TaskStatus;
 		tasks: Task[];
@@ -18,6 +19,7 @@
 		matchingIds: Set<string>;
 		searchActive: boolean;
 		ontoggle: () => void;
+		ontaskclick?: (task: Task) => void;
 	} = $props();
 </script>
 
@@ -99,6 +101,7 @@
 					<TaskCard
 						{task}
 						dimmed={searchActive && !matchingIds.has(task.id)}
+						onclick={ontaskclick ? () => ontaskclick(task) : undefined}
 					/>
 				{/each}
 			{/if}
