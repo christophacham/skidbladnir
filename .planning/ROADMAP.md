@@ -100,11 +100,11 @@ Plans:
   2. Detail panel streams live agent output in real time matching the WebSocket feed
   3. Agent text, tool calls, and errors are visually distinct (different styling or color coding)
   4. Task cards and detail panel both show current phase status (Working, Idle, Ready, Exited)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — WebSocket message types, WebSocketStore with output classification and phase status, UiStore extension, session REST helper, Vite WS proxy
+- [ ] 05-02-PLAN.md — DetailPanel, OutputView, InputBar, StatusDot components; Board split-view layout; TaskCard live status; NavBar connection indicator
 
 ### Phase 6: Workflow Engine
 **Goal**: Full AGTX workflow semantics work through the web interface -- phase transitions trigger side effects, plugins resolve correctly, skills deploy, and PR workflow functions
