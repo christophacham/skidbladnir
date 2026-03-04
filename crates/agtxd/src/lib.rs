@@ -5,3 +5,4 @@ pub mod logging;
 pub mod session;
 pub mod shutdown;
 pub mod state;
+pub mod workflow;

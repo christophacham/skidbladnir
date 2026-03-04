@@ -134,6 +134,9 @@ impl Database {
             "ALTER TABLE tasks ADD COLUMN cycle INTEGER NOT NULL DEFAULT 1",
             [],
         );
+        let _ = self
+            .conn
+            .execute("ALTER TABLE tasks ADD COLUMN session_id TEXT", []);
 
         Ok(())
     }
@@ -171,8 +174,8 @@ impl Database {
     pub fn create_task(&self, task: &Task) -> Result<()> {
         self.conn.execute(
             r#"
-            INSERT INTO tasks (id, title, description, status, agent, project_id, session_name, worktree_path, branch_name, pr_number, pr_url, plugin, cycle, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+            INSERT INTO tasks (id, title, description, status, agent, project_id, session_name, session_id, worktree_path, branch_name, pr_number, pr_url, plugin, cycle, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
             "#,
             params![
                 task.id,
@@ -182,6 +185,7 @@ impl Database {
                 task.agent,
                 task.project_id,
                 task.session_name,
+                task.session_id,
                 task.worktree_path,
                 task.branch_name,
                 task.pr_number,
@@ -204,13 +208,14 @@ impl Database {
                 status = ?4,
                 agent = ?5,
                 session_name = ?6,
-                worktree_path = ?7,
-                branch_name = ?8,
-                pr_number = ?9,
-                pr_url = ?10,
-                plugin = ?11,
-                cycle = ?12,
-                updated_at = ?13
+                session_id = ?7,
+                worktree_path = ?8,
+                branch_name = ?9,
+                pr_number = ?10,
+                pr_url = ?11,
+                plugin = ?12,
+                cycle = ?13,
+                updated_at = ?14
             WHERE id = ?1
             "#,
             params![
@@ -220,6 +225,7 @@ impl Database {
                 task.status.as_str(),
                 task.agent,
                 task.session_name,
+                task.session_id,
                 task.worktree_path,
                 task.branch_name,
                 task.pr_number,
@@ -248,6 +254,7 @@ impl Database {
             agent: row.get("agent")?,
             project_id: row.get("project_id")?,
             session_name: row.get("session_name")?,
+            session_id: row.get("session_id").ok().flatten(),
             worktree_path: row.get("worktree_path")?,
             branch_name: row.get("branch_name").ok().flatten(),
             pr_number: row.get("pr_number").ok().flatten(),

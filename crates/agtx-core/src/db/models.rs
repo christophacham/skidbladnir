@@ -64,6 +64,8 @@ pub struct Task {
     pub agent: String,
     pub project_id: String,
     pub session_name: Option<String>,
+    /// PTY session UUID (daemon session manager ID)
+    pub session_id: Option<String>,
     pub worktree_path: Option<String>,
     pub branch_name: Option<String>,
     pub pr_number: Option<i32>,
@@ -90,6 +92,7 @@ impl Task {
             agent: agent.into(),
             project_id: project_id.into(),
             session_name: None,
+            session_id: None,
             worktree_path: None,
             branch_name: None,
             pr_number: None,
