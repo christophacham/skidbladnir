@@ -6,6 +6,7 @@ use tokio::net::TcpListener;
 use agtx_core::config::GlobalConfig;
 use agtx_core::db::Database;
 use agtxd::api;
+use agtxd::config_watcher;
 use agtxd::logging;
 use agtxd::shutdown;
 use agtxd::state::AppState;
@@ -19,7 +20,7 @@ async fn main() -> Result<()> {
     let log_dir = GlobalConfig::data_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
         .join("logs");
-    let (_reload_handle, _guard) =
+    let (reload_handle, _guard) =
         logging::init_logging(&log_dir, &config.daemon.log_level)?;
 
     // Parse CLI args for optional --port and --bind overrides
@@ -67,6 +68,15 @@ async fn main() -> Result<()> {
 
     // Build application state and router
     let state = AppState::new(db_path, global_db_path, config);
+
+    // Spawn config file watcher as background task
+    if let Ok(config_path) = GlobalConfig::config_path() {
+        let shared_config = state.config.clone();
+        tokio::spawn(async move {
+            config_watcher::watch_config(config_path, shared_config, reload_handle).await;
+        });
+    }
+
     let app = api::api_router()
         .with_state(state)
         .layer(tower_http::trace::TraceLayer::new_for_http());
