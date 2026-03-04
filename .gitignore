@@ -17,5 +17,9 @@ Thumbs.db
 # Local agtx data (per-project)
 .agtx/
 
+# Node (lefthook tooling)
+node_modules/
+pnpm-lock.yaml
+
 # Logs
 *.log

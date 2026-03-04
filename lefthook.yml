@@ -1,0 +1,40 @@
+pre-commit:
+  parallel: true
+  env:
+    PATH: "${HOME}/.cargo/bin:${PATH}"
+  commands:
+    cargo-fmt:
+      glob: "*.rs"
+      run: $HOME/.cargo/bin/cargo fmt -- --check
+    cargo-clippy:
+      glob: "*.rs"
+      run: $HOME/.cargo/bin/cargo clippy --workspace -- -D warnings
+    no-ai-attribution:
+      glob: "*.{rs,toml,json,md,css,html}"
+      exclude: ".claude/**|.planning/**"
+      run: |
+        if grep -rPi '(\bclaude\b.*\b(code|anthropic|opus)\b|\banthropic\b|co-authored-by.*claude)' {staged_files}; then
+          echo "ERROR: AI attribution found in staged files"
+          exit 1
+        fi
+    cargo-test:
+      run: $HOME/.cargo/bin/cargo test --workspace
+
+pre-push:
+  parallel: true
+  commands:
+    cargo-test:
+      run: $HOME/.cargo/bin/cargo test --workspace
+    cargo-build:
+      run: $HOME/.cargo/bin/cargo build --workspace 2>&1 | (! grep -i 'warning')
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: 'head -1 {1} | grep -qE "^(feat|fix|refactor|chore|docs|test|perf|ci|build|style|revert)(\(.+\))?(!)?: .+"'
+    no-ai-in-commit-msg:
+      run: |
+        if grep -rPi '(\bclaude\b.*\b(code|anthropic|opus)\b|\banthropic\b|co-authored-by.*claude)' {1}; then
+          echo "ERROR: AI attribution found in commit message"
+          exit 1
+        fi
