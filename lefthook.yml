@@ -9,7 +9,13 @@ pre-commit:
       run: cargo clippy --workspace -- -D warnings
     cargo-test:
       glob: "*.rs"
-      run: cargo test --workspace --exclude agtx
+      # Exclude git_tests: worktree tests fail during pre-commit because
+      # lefthook holds .git/index.lock. Full suite runs in pre-push.
+      run: >
+        cargo test --workspace --exclude agtx &&
+        cargo test -p agtx --lib --test db_tests --test config_tests
+        --test board_tests --test agent_tests --test shell_popup_tests
+        --test mock_infrastructure_tests
     no-ai-attribution:
       glob: "*.{rs,toml,json,md,css,html}"
       exclude: ".claude/**|.planning/**"

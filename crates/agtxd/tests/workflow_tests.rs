@@ -2,6 +2,7 @@
 //! These tests verify daemon-side workflow behavior for FLOW-01, FLOW-05, FLOW-06.
 
 /// Helper to build the app with temp databases (same pattern as api_tests.rs)
+#[allow(dead_code)]
 fn build_test_app(tmp_dir: &std::path::Path) -> axum::Router {
     let db_path = tmp_dir.join("test_project.db");
     let global_db_path = tmp_dir.join("test_global.db");
