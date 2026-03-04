@@ -18,12 +18,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### PTY Process Management
 
-- [ ] **PTY-01**: Daemon spawns agent processes with PTY pairs via portable-pty
-- [ ] **PTY-02**: Daemon reads agent PTY output as continuous byte stream
-- [ ] **PTY-03**: Daemon writes to agent PTY stdin (commands, text input from browser)
-- [ ] **PTY-04**: Daemon resizes PTY on browser viewport change
+- [x] **PTY-01**: Daemon spawns agent processes with PTY pairs via portable-pty
+- [x] **PTY-02**: Daemon reads agent PTY output as continuous byte stream
+- [x] **PTY-03**: Daemon writes to agent PTY stdin (commands, text input from browser)
+- [x] **PTY-04**: Daemon resizes PTY on browser viewport change
 - [ ] **PTY-05**: Daemon cleans up agent processes on exit with PR_SET_PDEATHSIG to prevent zombies
-- [ ] **PTY-06**: Daemon tracks PIDs for all managed agent processes
+- [x] **PTY-06**: Daemon tracks PIDs for all managed agent processes
 - [ ] **PTY-07**: Daemon reports per-agent resource usage (CPU/memory per PID via /proc)
 
 ### WebSocket & Sessions
@@ -141,12 +141,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-04 | Phase 1: Daemon Foundation | Complete |
 | INFRA-05 | Phase 1: Daemon Foundation | Complete |
 | INFRA-06 | Phase 1: Daemon Foundation | Complete |
-| PTY-01 | Phase 2: PTY Process Management | Pending |
-| PTY-02 | Phase 2: PTY Process Management | Pending |
-| PTY-03 | Phase 2: PTY Process Management | Pending |
-| PTY-04 | Phase 2: PTY Process Management | Pending |
+| PTY-01 | Phase 2: PTY Process Management | Complete |
+| PTY-02 | Phase 2: PTY Process Management | Complete |
+| PTY-03 | Phase 2: PTY Process Management | Complete |
+| PTY-04 | Phase 2: PTY Process Management | Complete |
 | PTY-05 | Phase 2: PTY Process Management | Pending |
-| PTY-06 | Phase 2: PTY Process Management | Pending |
+| PTY-06 | Phase 2: PTY Process Management | Complete |
 | PTY-07 | Phase 2: PTY Process Management | Pending |
 | WS-01 | Phase 3: WebSocket Streaming | Pending |
 | WS-02 | Phase 3: WebSocket Streaming | Pending |

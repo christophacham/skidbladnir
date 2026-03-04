@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-03-04T08:18:10.681Z"
-last_activity: 2026-03-04 -- Completed Plan 01-02 (structured logging + config hot-reload)
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-04T09:29:22Z"
+last_activity: 2026-03-04 -- Completed Plan 02-01 (session types, output, SessionManager)
 progress:
   total_phases: 10
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 10
+  total_plans: 3
+  completed_plans: 3
+  percent: 13
 ---
 
 # Project State
@@ -21,32 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Manage multiple coding agent sessions from any browser with full reconnectable history, without losing any of the workflow semantics that make AGTX useful.
-**Current focus:** Phase 1 - Daemon Foundation
+**Current focus:** Phase 2 - PTY Process Management
 
 ## Current Position
 
-Phase: 1 of 10 (Daemon Foundation) -- COMPLETE
-Plan: 2 of 2 in current phase (all plans complete)
+Phase: 2 of 10 (PTY Process Management) -- IN PROGRESS
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 01-02 (structured logging + config hot-reload)
+Last activity: 2026-03-04 -- Completed Plan 02-01 (session types, output, SessionManager)
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [█▒░░░░░░░░] 13%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 7min
-- Total execution time: 0.23 hours
+- Total plans completed: 3
+- Average duration: 9min
+- Total execution time: 0.43 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-daemon-foundation | 2 | 14min | 7min |
+| 02-pty-process-management | 1 | 12min | 12min |
 
 **Recent Trend:**
-- Last 5 plans: 8min, 6min
+- Last 5 plans: 8min, 6min, 12min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -68,6 +69,10 @@ Recent decisions affecting current work:
 - 01-02: Watch parent directory (not file) for config changes to handle editor save patterns
 - 01-02: 200ms debounce window for config reload to prevent duplicate reloads
 - 01-02: Port/bind changes stored in config but logged as restart-required warnings
+- 02-01: pty-process 0.5 chosen over portable-pty for native async PTY I/O
+- 02-01: OwnedWritePty wrapped in Mutex for fine-grained write locking
+- 02-01: OwnedWritePty::resize() works after into_split() (RESEARCH open question #2 resolved)
+- 02-01: Reader task treats EIO as normal PTY close, not error
 
 ### Pending Todos
 
@@ -75,11 +80,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Research flagged PTY async bridging as MEDIUM confidence -- Phase 2 may need deeper investigation
 - Requirements doc states 52 requirements but actual count is 58 -- traceability uses actual count
+- Pre-commit hook no-ai-attribution blocks staging files containing agent name references -- prevents committing format-only changes to agent definition files
 
 ## Session Continuity
 
-Last session: 2026-03-04T08:12:11Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: .planning/phases/01-daemon-foundation/01-02-SUMMARY.md
+Last session: 2026-03-04T09:29:22Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-pty-process-management/02-02-PLAN.md

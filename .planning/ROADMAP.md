@@ -193,7 +193,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
-| 2. PTY Process Management | 0/3 | Not started | - |
+| 2. PTY Process Management | 1/3 | In progress | - |
 | 3. WebSocket Streaming | 0/2 | Not started | - |
 | 4. Frontend Kanban Board | 0/2 | Not started | - |
 | 5. Task Detail & Live Output | 0/2 | Not started | - |
