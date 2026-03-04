@@ -1,5 +1,25 @@
 export type TaskStatus = 'Backlog' | 'Planning' | 'Running' | 'Review' | 'Done';
 export type PhaseStatus = 'working' | 'idle' | 'ready' | 'exited';
+export type ConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
+export type OutputBlockType = 'text' | 'tool_call' | 'error';
+
+export interface OutputBlock {
+	id: number;
+	text: string;
+	type: OutputBlockType;
+	timestamp: number;
+}
+
+export type ServerMessage =
+	| { type: 'output'; data: string; offset: number }
+	| { type: 'state'; session_state: string; exit_code?: number }
+	| { type: 'metrics'; cpu_percent: number; rss_bytes: number; uptime_secs: number }
+	| { type: 'error'; message: string }
+	| { type: 'connected'; session_id: string; total_bytes: number };
+
+export type ClientMessage =
+	| { type: 'write'; input: string }
+	| { type: 'resize'; rows: number; cols: number };
 
 export interface Task {
 	id: string;
@@ -8,6 +28,7 @@ export interface Task {
 	status: TaskStatus;
 	agent: string;
 	project_id: string;
+	session_id: string | null;
 	session_name: string | null;
 	worktree_path: string | null;
 	branch_name: string | null;
