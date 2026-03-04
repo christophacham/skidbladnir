@@ -12,7 +12,7 @@ Transform AGTX from a terminal TUI into a web-native dashboard backed by a persi
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Daemon Foundation** - Axum server with REST API skeleton, structured logging, health checks, and lifecycle management
+- [x] **Phase 1: Daemon Foundation** - Axum server with REST API skeleton, structured logging, health checks, and lifecycle management (completed 2026-03-04)
 - [ ] **Phase 2: PTY Process Management** - Agent process spawning and control via portable-pty with async bridging
 - [ ] **Phase 3: WebSocket Streaming** - Bidirectional real-time agent output streaming with session persistence and reconnection
 - [ ] **Phase 4: Frontend Kanban Board** - SvelteKit SPA with 5-column kanban layout, task CRUD, and project navigation
@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Structured logs rotate to disk with configurable levels and non-blocking writes
   4. Daemon shuts down cleanly on SIGTERM/SIGINT without orphaned resources
   5. Configuration changes take effect without restarting the daemon process
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 01-01-PLAN.md — Cargo workspace restructuring + agtxd daemon with REST API skeleton, health endpoint, and graceful shutdown
@@ -191,7 +191,7 @@ Note: Phase 4 (Frontend Kanban) depends only on Phase 1 and could theoretically 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Daemon Foundation | 1/2 | In Progress|  |
+| 1. Daemon Foundation | 2/2 | Complete   | 2026-03-04 |
 | 2. PTY Process Management | 0/2 | Not started | - |
 | 3. WebSocket Streaming | 0/2 | Not started | - |
 | 4. Frontend Kanban Board | 0/2 | Not started | - |

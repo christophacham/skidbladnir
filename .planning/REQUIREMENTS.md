@@ -11,10 +11,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **INFRA-01**: Daemon serves REST API endpoints for task and project CRUD via axum
 - [ ] **INFRA-02**: Daemon serves WebSocket endpoint for bidirectional real-time streaming
-- [ ] **INFRA-03**: Structured logging with tracing + tracing-appender (rotation, non-blocking writes)
+- [x] **INFRA-03**: Structured logging with tracing + tracing-appender (rotation, non-blocking writes)
 - [x] **INFRA-04**: Health check endpoint returns daemon status
 - [x] **INFRA-05**: Daemon handles graceful shutdown on SIGTERM/SIGINT with active process cleanup
-- [ ] **INFRA-06**: Daemon reloads configuration changes without restart
+- [x] **INFRA-06**: Daemon reloads configuration changes without restart
 
 ### PTY Process Management
 
@@ -137,10 +137,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | INFRA-01 | Phase 1: Daemon Foundation | Complete |
 | INFRA-02 | Phase 3: WebSocket Streaming | Pending |
-| INFRA-03 | Phase 1: Daemon Foundation | Pending |
+| INFRA-03 | Phase 1: Daemon Foundation | Complete |
 | INFRA-04 | Phase 1: Daemon Foundation | Complete |
 | INFRA-05 | Phase 1: Daemon Foundation | Complete |
-| INFRA-06 | Phase 1: Daemon Foundation | Pending |
+| INFRA-06 | Phase 1: Daemon Foundation | Complete |
 | PTY-01 | Phase 2: PTY Process Management | Pending |
 | PTY-02 | Phase 2: PTY Process Management | Pending |
 | PTY-03 | Phase 2: PTY Process Management | Pending |

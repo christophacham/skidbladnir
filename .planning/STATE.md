@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-04T08:02:31Z"
-last_activity: 2026-03-04 -- Completed Plan 01-01 (workspace + daemon foundation)
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-04T08:12:11Z"
+last_activity: 2026-03-04 -- Completed Plan 01-02 (structured logging + config hot-reload)
 progress:
   total_phases: 10
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 5
+  completed_plans: 2
+  percent: 10
 ---
 
 # Project State
@@ -25,29 +25,29 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 1 of 10 (Daemon Foundation)
-Plan: 1 of 2 in current phase
+Phase: 1 of 10 (Daemon Foundation) -- COMPLETE
+Plan: 2 of 2 in current phase (all plans complete)
 Status: Executing
-Last activity: 2026-03-04 -- Completed Plan 01-01 (workspace + daemon foundation)
+Last activity: 2026-03-04 -- Completed Plan 01-02 (structured logging + config hot-reload)
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 8min
-- Total execution time: 0.13 hours
+- Total plans completed: 2
+- Average duration: 7min
+- Total execution time: 0.23 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-daemon-foundation | 1 | 8min | 8min |
+| 01-daemon-foundation | 2 | 14min | 7min |
 
 **Recent Trend:**
-- Last 5 plans: 8min
-- Trend: baseline
+- Last 5 plans: 8min, 6min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -64,6 +64,10 @@ Recent decisions affecting current work:
 - 01-01: Re-export facade pattern (pub use agtx_core::*) maintains backward compatibility for TUI
 - 01-01: Default daemon port 3742, Database::open_at for explicit path databases
 - 01-01: agtxd has lib.rs + main.rs to support integration tests
+- 01-02: build_logging() helper for test-friendly subscriber construction (avoids global default conflicts)
+- 01-02: Watch parent directory (not file) for config changes to handle editor save patterns
+- 01-02: 200ms debounce window for config reload to prevent duplicate reloads
+- 01-02: Port/bind changes stored in config but logged as restart-required warnings
 
 ### Pending Todos
 
@@ -76,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T08:02:31Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-daemon-foundation/01-01-SUMMARY.md
+Last session: 2026-03-04T08:12:11Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: .planning/phases/01-daemon-foundation/01-02-SUMMARY.md
